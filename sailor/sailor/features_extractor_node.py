@@ -1,7 +1,8 @@
 
-import math
 import cv2
-from typing import List, Union
+import math
+from typing import List
+from typing import Union
 
 import rclpy
 from rclpy.node import Node
