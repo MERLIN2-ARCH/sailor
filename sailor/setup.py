@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-package_name = 'anchoring'
+package_name = 'sailor'
 
 setup(
     name=package_name,
@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'features_extractor_node = anchoring.features_extractor_node:main'
+            'features_extractor_node = sailor.features_extractor_node:main',
+            'anchoring_node = sailor.anchoring_node:main'
         ],
     },
 )

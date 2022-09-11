@@ -24,8 +24,8 @@ from sensor_msgs.msg import PointCloud2
 from vision_msgs.msg import Detection2DArray
 from vision_msgs.msg import Detection2D
 
-from anchoring_interfaces.msg import Percept
-from anchoring_interfaces.msg import PerceptArray
+from sailor_interfaces.msg import Percept
+from sailor_interfaces.msg import PerceptArray
 
 
 class FeaturesExtractorNode(Node):

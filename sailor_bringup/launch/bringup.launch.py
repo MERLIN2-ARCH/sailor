@@ -13,7 +13,7 @@ def generate_launch_description():
     asus_xtion_shared_dir = get_package_share_directory(
         "asus_xtion")
     bringup_shared_dir = get_package_share_directory(
-        "anchoring_bringup")
+        "sailor_bringup")
     stdout_linebuf_envvar = SetEnvironmentVariable(
         "RCUTILS_CONSOLE_STDOUT_LINE_BUFFERED", "1")
 
@@ -21,7 +21,7 @@ def generate_launch_description():
     # NODES
     #
     features_extractor_node_cmd = Node(
-        package="anchoring",
+        package="sailor",
         executable="features_extractor_node",
         name="features_extractor_node",
         output="screen",
