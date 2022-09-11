@@ -144,6 +144,10 @@ class FeaturesExtractorNode(Node):
                                  trans.transform.rotation.z],
                                 size)
 
+            size[0] = abs(size[0])
+            size[1] = abs(size[1])
+            size[2] = abs(size[2])
+
         except TransformException as ex:
             self.get_logger().info(
                 f'Could not transform: {ex}')
