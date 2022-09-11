@@ -8,6 +8,8 @@ import rclpy
 from rclpy.node import Node
 
 from sailor.anchor import Anchor
+from sailor.matching_function import MatchingFunction
+from sailor.matching_function import FuzzyMatchingFunction
 
 from sailor_interfaces.msg import Percept
 from sailor_interfaces.msg import PerceptArray
@@ -22,6 +24,7 @@ class AnchoringNode(Node):
 
         self.anchors = []
         self.cv_bridge = cv_bridge.CvBridge()
+        self.matching_funtion = FuzzyMatchingFunction()
 
         self.similarities_pub = self.create_publisher(
             SimilaritiesArray, "similarities", 10)
@@ -37,10 +40,15 @@ class AnchoringNode(Node):
         for ele in msg.percepts:
 
             anchor = self.create_anchor(ele)
-            anchor.last_time_seen = (
+            anchor.last_time_seen = float(
                 msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9)
 
             new_anchors.append(anchor)
+
+        # check if there are no anchors
+        if not self.anchors:
+            self.anchors.append(new_anchors[0])
+            new_anchors = new_anchors[1:]
 
         # compare new anchors
         similarities_array = SimilaritiesArray()
@@ -56,14 +64,19 @@ class AnchoringNode(Node):
                 similarities_msg.color_histogram_similarity = similarities[1]
                 similarities_msg.position_similarity = similarities[2]
                 similarities_msg.size_similarity = similarities[3]
-                similarities_msg.last_time_similarity = similarities[4]
+                similarities_msg.last_time_seen_similarity = similarities[4]
 
                 similarities_array.similarities.append(similarities_msg)
 
-        self.similarities_pub.publish(similarities_array)
+                # matching function
+                match = self.matching_funtion.match(similarities[0],
+                                                    similarities[1],
+                                                    similarities[2],
+                                                    similarities[3],
+                                                    similarities[4])
+                similarities_msg.match = match
 
-        # matching function
-        pass
+        self.similarities_pub.publish(similarities_array)
 
     def create_anchor(self, msg: Percept) -> Anchor:
 
@@ -128,7 +141,7 @@ class AnchoringNode(Node):
                                     ) -> float:
 
         return math.exp(
-            math.sqrt(
+            - math.sqrt(
                 math.pow(anchor.position[0] - new_anchor.position[0], 2) +
                 math.pow(anchor.position[1] - new_anchor.position[1], 2) +
                 math.pow(anchor.position[2] - new_anchor.position[2], 2)
@@ -145,8 +158,7 @@ class AnchoringNode(Node):
                 min(anchor.size[0], new_anchor.size[0]) +
                 min(anchor.size[1], new_anchor.size[1]) +
                 min(anchor.size[2], new_anchor.size[2])
-            ) /
-            (
+            ) / (
                 max(anchor.size[0], new_anchor.size[0]) +
                 max(anchor.size[1], new_anchor.size[1]) +
                 max(anchor.size[2], new_anchor.size[2])
