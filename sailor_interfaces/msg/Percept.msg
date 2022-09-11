@@ -9,9 +9,6 @@ vision_msgs/BoundingBox2D bounding_box
 geometry_msgs/Vector3 position
 geometry_msgs/Vector3 size
 
-# color histogram
-float32[] histogram
-int32 histogram_bins_per_channel
-
-# image
+# visual features
+sensor_msgs/Image color_histogram
 sensor_msgs/Image image

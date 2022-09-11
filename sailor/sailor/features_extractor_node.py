@@ -149,14 +149,6 @@ class FeaturesExtractorNode(Node):
                 f'Could not transform: {ex}')
             return None
 
-        # process histogram
-        histogram_list = []
-
-        for i in range(len(histogram)):
-            for j in range(len(histogram[i])):
-                for ele in histogram[i][j]:
-                    histogram_list.append(float(ele))
-
         # create percept message
         msg = Percept()
 
@@ -172,8 +164,7 @@ class FeaturesExtractorNode(Node):
         msg.size.y = size[1]
         msg.size.z = size[2]
 
-        msg.histogram = histogram_list
-        msg.histogram_bins_per_channel = self.histogram_bins_per_channel
+        msg.color_histogram = self.cv_bridge.cv2_to_imgmsg(histogram)
 
         msg.image = self.cv_bridge.cv2_to_imgmsg(
             cropped_image, encoding=image.encoding)
