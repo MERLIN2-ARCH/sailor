@@ -13,8 +13,6 @@ from sailor.matching_function import FuzzyMatchingFunction
 
 from sailor_interfaces.msg import Percept
 from sailor_interfaces.msg import PerceptArray
-from sailor_interfaces.msg import Similarities
-from sailor_interfaces.msg import SimilaritiesArray
 
 
 class AnchoringNode(Node):
@@ -22,12 +20,13 @@ class AnchoringNode(Node):
     def __init__(self) -> None:
         super().__init__("anchoring_node")
 
-        self.anchors = []
+        self.anchors: List[Anchor] = []
         self.cv_bridge = cv_bridge.CvBridge()
         self.matching_funtion = FuzzyMatchingFunction()
 
-        self.similarities_pub = self.create_publisher(
-            SimilaritiesArray, "similarities", 10)
+        self.declare_parameter("matching_threshold", 0.7)
+        self.matching_threshold = self.get_parameter(
+            "matching_threshold").get_parameter_value().double_value
 
         self.percepts_sub = self.create_subscription(
             PerceptArray, "percepts", self.percepts_cb, 10)
@@ -51,32 +50,35 @@ class AnchoringNode(Node):
             new_anchors = new_anchors[1:]
 
         # compare new anchors
-        similarities_array = SimilaritiesArray()
+        for new_anchor in new_anchors:
 
-        for i in range(len(self.anchors)):
-            for j in range(len(new_anchors)):
+            matching_table = []
 
-                similarities = self.compare_anchors(
-                    self.anchors[i], new_anchors[j])
+            # compare a candidate with all existing anchors
+            for anchor in self.anchors:
 
-                similarities_msg = Similarities()
-                similarities_msg.class_similarity = similarities[0]
-                similarities_msg.color_histogram_similarity = similarities[1]
-                similarities_msg.position_similarity = similarities[2]
-                similarities_msg.size_similarity = similarities[3]
-                similarities_msg.last_time_seen_similarity = similarities[4]
-
-                similarities_array.similarities.append(similarities_msg)
+                # compute similarities
+                similarities = self.compare_anchors(anchor, new_anchor)
 
                 # matching function
-                match = self.matching_funtion.match(similarities[0],
-                                                    similarities[1],
-                                                    similarities[2],
-                                                    similarities[3],
-                                                    similarities[4])
-                similarities_msg.match = match
+                matching_value = self.matching_funtion.match(similarities[0],
+                                                             similarities[1],
+                                                             similarities[2],
+                                                             similarities[3],
+                                                             similarities[4])
 
-        self.similarities_pub.publish(similarities_array)
+                if matching_value > self.matching_threshold:
+                    matching_table.append(matching_value)
+
+            # acquire
+            if not matching_table:
+                # TODO: create PddlObjectDao
+                self.anchors.append(new_anchor)
+
+            # reacquire
+            else:
+                max_matching_index = matching_table.index(max(matching_table))
+                self.anchors[max_matching_index].update(new_anchor)
 
     def create_anchor(self, msg: Percept) -> Anchor:
 

@@ -10,6 +10,21 @@ class Anchor:
     def __init__(self) -> None:
         pass
 
+    def update(self, other: "Anchor") -> None:
+
+        self.class_id = other.class_id
+        self.class_name = other.class_name
+        self.class_score = other.class_score
+        self.bounding_box = other.bounding_box
+
+        self.position = other.position
+        self.size = other.size
+
+        self.color_histogram = other.color_histogram
+        self.image = other.image
+
+        self.last_time_seen = other.last_time_seen
+
     ### symbolic ###
     @property
     def symbol(self) -> PddlObjectDto:

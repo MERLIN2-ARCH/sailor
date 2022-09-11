@@ -38,8 +38,6 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Percept.msg"
   "msg/PerceptArray.msg"
-  "msg/Similarities.msg"
-  "msg/SimilaritiesArray.msg"
   DEPENDENCIES sensor_msgs vision_msgs geometry_msgs
 )
 
