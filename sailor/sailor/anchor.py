@@ -45,11 +45,11 @@ class Anchor:
         self._size = size
 
     @property
-    def last_time_seen(self) -> int:
+    def last_time_seen(self) -> float:
         return self._last_time_seen
 
     @size.setter
-    def last_time_seen(self, last_time_seen: int) -> None:
+    def last_time_seen(self, last_time_seen: float) -> None:
         self._last_time_seen = last_time_seen
 
     @property
