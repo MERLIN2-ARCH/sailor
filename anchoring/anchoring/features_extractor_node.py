@@ -2,7 +2,6 @@
 import math
 import cv2
 from typing import List, Union
-import numpy as np
 
 import rclpy
 from rclpy.node import Node
