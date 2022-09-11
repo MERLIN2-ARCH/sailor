@@ -1,6 +1,7 @@
 
 import cv2
 import cv_bridge
+from typing import List
 
 import rclpy
 from rclpy.node import Node
@@ -36,7 +37,12 @@ class AnchoringNode(Node):
             new_anchors.append(anchor)
 
         # compare new anchors
-        pass
+        similarities = []
+
+        for i in range(len(new_anchors)):
+            for j in range(len(self.anchors)):
+                s = self.compare_anchors(new_anchors[i], self.anchors[j])
+                similarities.append(s)
 
         # matching function
         pass
@@ -58,6 +64,15 @@ class AnchoringNode(Node):
             self.cv_bridge.imgmsg_to_cv2(msg.image), cv2.COLOR_BGR2RGB)
 
         return anchor
+
+    ###################################
+    # methods to compute similarities #
+    ###################################
+    def compare_anchors(self,
+                        new_anchor: Anchor,
+                        anchor: Anchor
+                        ) -> List[float]:
+        return [0.0]
 
 
 def main():
