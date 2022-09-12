@@ -170,6 +170,9 @@ class FeaturesExtractorNode(Node):
 
         msg.color_histogram = self.cv_bridge.cv2_to_imgmsg(histogram)
 
+        if len(cropped_image.data) == 0:
+            return None
+
         msg.image = self.cv_bridge.cv2_to_imgmsg(
             cropped_image, encoding=image.encoding)
 

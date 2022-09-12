@@ -25,8 +25,8 @@ class FuzzyMatchingFunction:
         last_time_seen_similarity.automf(names=names)
 
         # output
-        similarity = ctrl.Consequent(universe, "similarity")
-        similarity.automf(names=names)
+        mathcing = ctrl.Consequent(universe, "mathcing")
+        mathcing.automf(names=names)
 
         # rules
         rule0 = ctrl.Rule(
@@ -37,12 +37,11 @@ class FuzzyMatchingFunction:
                 (position_similarity["low"] &
                  (last_time_seen_similarity["low"] |
                  last_time_seen_similarity["medium"]) &
-                 (class_similarity["medium"] |
-                 color_histogram_similarity["medium"] |
+                 (color_histogram_similarity["medium"] |
                  size_similarity["medium"])
                  )
             ),
-            consequent=similarity["low"],
+            consequent=mathcing["low"],
             label="rule0")
 
         rule1 = ctrl.Rule(
@@ -52,21 +51,19 @@ class FuzzyMatchingFunction:
 
                     (position_similarity["low"] &
                      last_time_seen_similarity["medium"] &
-                     (class_similarity["high"] |
-                        color_histogram_similarity["high"] |
-                        size_similarity["high"])
+                     (color_histogram_similarity["high"] |
+                      size_similarity["high"])
                      ) |
 
                     (position_similarity["high"] &
                      (last_time_seen_similarity["low"] |
                         last_time_seen_similarity["medium"]) &
-                        (class_similarity["medium"] |
-                         color_histogram_similarity["medium"] |
+                        (color_histogram_similarity["medium"] |
                          size_similarity["medium"])
                      )
                 )
             ),
-            consequent=similarity["medium"],
+            consequent=mathcing["medium"],
             label="rule1")
 
         rule2 = ctrl.Rule(
@@ -75,21 +72,19 @@ class FuzzyMatchingFunction:
                 (class_similarity["medium"] | class_similarity["high"]) & (
 
                     (position_similarity["high"] &
-                     (class_similarity["high"] |
-                     color_histogram_similarity["high"] |
+                     (color_histogram_similarity["high"] |
                      size_similarity["high"])
                      ) |
 
                     (position_similarity["high"] &
                      last_time_seen_similarity["high"] &
-                     (class_similarity["medium"] |
-                     color_histogram_similarity["medium"] |
+                     (color_histogram_similarity["medium"] |
                      size_similarity["medium"]
                       )
                      )
                 )
             ),
-            consequent=similarity["high"],
+            consequent=mathcing["high"],
             label="rule2")
 
         system = ctrl.ControlSystem([rule0, rule1, rule2])
@@ -110,6 +105,6 @@ class FuzzyMatchingFunction:
         self.sim.input["last_time_seen_similarity"] = last_time_seen_similarity
 
         self.sim.compute()
-        output = self.sim.output["similarity"]
+        output = self.sim.output["mathcing"]
 
         return float(output)
