@@ -25,6 +25,12 @@ def generate_launch_description():
     #
     # ARGS
     #
+    matching_threshold = LaunchConfiguration("matching_threshold")
+    matching_threshold_cmd = DeclareLaunchArgument(
+        "matching_threshold",
+        default_value="0.5",
+        description="Matching threshold for anchoring process")
+
     dao_family = LaunchConfiguration("dao_family")
     dao_family_cmd = DeclareLaunchArgument(
         "dao_family",
@@ -56,7 +62,7 @@ def generate_launch_description():
         executable="anchoring_node",
         name="anchoring_node",
         output="screen",
-        parameters=[{"matching_threshold": 0.7,
+        parameters=[{"matching_threshold": matching_threshold,
                      "mongo_uri": mongo_uri,
                      "dao_family": dao_family
                      }]
@@ -98,6 +104,7 @@ def generate_launch_description():
 
     ld.add_action(stdout_linebuf_envvar)
 
+    ld.add_action(matching_threshold_cmd)
     ld.add_action(dao_family_cmd)
     ld.add_action(mongo_uri_cmd)
 
