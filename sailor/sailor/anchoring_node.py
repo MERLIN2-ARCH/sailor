@@ -7,6 +7,10 @@ from typing import List
 import rclpy
 from rclpy.node import Node
 
+from kant_dto import PddlObjectDto
+from kant_dto import PddlTypeDto
+from kant_dao import ParameterLoader
+
 from sailor.anchor import Anchor
 from sailor.matching_function import MatchingFunction
 from sailor.matching_function import FuzzyMatchingFunction
@@ -20,10 +24,16 @@ class AnchoringNode(Node):
     def __init__(self) -> None:
         super().__init__("anchoring_node")
 
+        # anchoring
         self.anchors: List[Anchor] = []
         self.cv_bridge = cv_bridge.CvBridge()
         self.matching_funtion = FuzzyMatchingFunction()
 
+        # kant
+        dao_factory = ParameterLoader(self).get_dao_factory()
+        self.object_dao = dao_factory.create_pddl_object_dao()
+
+        # parameters
         self.declare_parameter("matching_threshold", 0.7)
         self.matching_threshold = self.get_parameter(
             "matching_threshold").get_parameter_value().double_value
@@ -43,11 +53,6 @@ class AnchoringNode(Node):
                 msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9)
 
             new_anchors.append(anchor)
-
-        # check if there are no anchors
-        if not self.anchors:
-            self.anchors.append(new_anchors[0])
-            new_anchors = new_anchors[1:]
 
         # compare new anchors
         for new_anchor in new_anchors:
@@ -72,7 +77,20 @@ class AnchoringNode(Node):
 
             # acquire
             if not matching_table:
-                # TODO: create PddlObjectDao
+
+                counter = 0
+                objects = self.object_dao.get_all()
+
+                for ele in objects:
+                    if ele.get_type().get_name() == new_anchor.class_name:
+                        counter
+
+                new_object = PddlObjectDto(PddlTypeDto(new_anchor.class_name),
+                                           new_anchor.class_name + "-" + str(counter))
+
+                new_anchor.symbol = new_object
+                self.object_dao.save(new_object)
+
                 self.anchors.append(new_anchor)
 
             # reacquire
@@ -121,12 +139,7 @@ class AnchoringNode(Node):
         if anchor.class_id != new_anchor.class_id:
             return 0.0
 
-        return math.exp(
-            - (
-                abs(anchor.class_score - new_anchor.class_score) /
-                (anchor.class_score + new_anchor.class_score)
-            )
-        )
+        return 1.0
 
     def compute_color_histogram_similarity(self,
                                            anchor: Anchor,

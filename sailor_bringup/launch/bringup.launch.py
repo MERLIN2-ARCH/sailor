@@ -1,9 +1,14 @@
 import os
 from launch import LaunchDescription
-from launch.actions import SetEnvironmentVariable, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 from launch_ros.actions import Node
+from launch.conditions import LaunchConfigurationEquals
+from launch.substitutions import LaunchConfiguration
+
+
+from kant_dao.dao_factory import DaoFamilies
 
 
 def generate_launch_description():
@@ -18,6 +23,21 @@ def generate_launch_description():
         "RCUTILS_CONSOLE_STDOUT_LINE_BUFFERED", "1")
 
     #
+    # ARGS
+    #
+    dao_family = LaunchConfiguration("dao_family")
+    dao_family_cmd = DeclareLaunchArgument(
+        "dao_family",
+        default_value=str(int(DaoFamilies.ROS2)),
+        description="DAO family")
+
+    mongo_uri = LaunchConfiguration("mongo_uri")
+    mongo_uri_cmd = DeclareLaunchArgument(
+        "mongo_uri",
+        default_value="mongodb://localhost:27017/merlin2",
+        description="MongoDB URI")
+
+    #
     # NODES
     #
     features_extractor_node_cmd = Node(
@@ -29,6 +49,25 @@ def generate_launch_description():
                      "maximum_detection_threshold": 0.2,
                      "histogram_bins_per_channel": 8,
                      "class_names": os.path.join(bringup_shared_dir, "config/darknet", "coco.names")}]
+    )
+
+    anchoring_node_cmd = Node(
+        package="sailor",
+        executable="anchoring_node",
+        name="anchoring_node",
+        output="screen",
+        parameters=[{"matching_threshold": 0.7,
+                     "mongo_uri": mongo_uri,
+                     "dao_family": dao_family
+                     }]
+    )
+
+    knowledge_base_node_cmd = Node(
+        package="kant_knowledge_base",
+        executable="knowledge_base_node.py",
+        name="knowledge_base_node",
+        condition=LaunchConfigurationEquals(
+            "dao_family", str(int(DaoFamilies.ROS2)))
     )
 
     #
@@ -58,7 +97,14 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     ld.add_action(stdout_linebuf_envvar)
+
+    ld.add_action(dao_family_cmd)
+    ld.add_action(mongo_uri_cmd)
+
     ld.add_action(features_extractor_node_cmd)
+    ld.add_action(anchoring_node_cmd)
+    ld.add_action(knowledge_base_node_cmd)
+
     ld.add_action(darknet_action_cmd)
     ld.add_action(asus_xtion_action_cmd)
 

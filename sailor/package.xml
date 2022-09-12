@@ -19,6 +19,8 @@
   <depend>sensor_msgs</depend>
   <depend>vision_msgs</depend>
   <depend>sailor_interfaces</depend>
+  <depend>kant_dto</depend>
+  <depend>kant_dao</depend>
 
   <export>
     <build_type>ament_python</build_type>
