@@ -5,7 +5,7 @@ import cv_bridge
 from typing import List
 
 import rclpy
-from rclpy.node import Node
+from simple_node import Node
 
 from kant_dto import PddlObjectDto
 from kant_dto import PddlTypeDto
@@ -83,7 +83,7 @@ class AnchoringNode(Node):
 
                 for ele in objects:
                     if ele.get_type().get_name() == new_anchor.class_name:
-                        counter
+                        counter += 1
 
                 new_object = PddlObjectDto(PddlTypeDto(new_anchor.class_name),
                                            new_anchor.class_name + "-" + str(counter))
@@ -197,5 +197,6 @@ class AnchoringNode(Node):
 
 def main():
     rclpy.init()
-    rclpy.spin(AnchoringNode())
+    node = AnchoringNode()
+    node.join_spin()
     rclpy.shutdown()

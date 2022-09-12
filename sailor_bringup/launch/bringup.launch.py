@@ -34,7 +34,7 @@ def generate_launch_description():
     mongo_uri = LaunchConfiguration("mongo_uri")
     mongo_uri_cmd = DeclareLaunchArgument(
         "mongo_uri",
-        default_value="mongodb://localhost:27017/merlin2",
+        default_value="mongodb://localhost:27017/anchoring",
         description="MongoDB URI")
 
     #

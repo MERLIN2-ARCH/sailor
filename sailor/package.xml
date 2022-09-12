@@ -19,6 +19,7 @@
   <depend>sensor_msgs</depend>
   <depend>vision_msgs</depend>
   <depend>sailor_interfaces</depend>
+  <depend>simple_node</depend>
   <depend>kant_dto</depend>
   <depend>kant_dao</depend>
 
