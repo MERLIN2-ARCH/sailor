@@ -46,3 +46,13 @@ $ rosdep install --from-paths src -r -y
 $ colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DDARKNET_OPENCV=Off --packages-select darknet_vendor
 $ colcon build
 ```
+
+## Usage
+
+```shell
+$ ros2 launch sailor_bringup bringup.launch.py
+```
+
+```shell
+$ ros2 service call /get_objects kant_interfaces/srv/GetPddlObject {}
+```
