@@ -123,6 +123,9 @@ class FeaturesExtractorNode(Node):
         position, size = physical_features
         histogram, cropped_image = visual_features
 
+        if len(cropped_image.data) == 0:
+            return None
+
         # transform position to target_frame
         try:
             now = rclpy.time.Time()
@@ -169,10 +172,6 @@ class FeaturesExtractorNode(Node):
         msg.size.z = size[2]
 
         msg.color_histogram = self.cv_bridge.cv2_to_imgmsg(histogram)
-
-        if len(cropped_image.data) == 0:
-            return None
-
         msg.image = self.cv_bridge.cv2_to_imgmsg(
             cropped_image, encoding=image.encoding)
 
