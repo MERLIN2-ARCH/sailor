@@ -22,7 +22,7 @@ dowload_sailor(){
 
 install_kant_dependencies(){
     # kant dependencies
-    sudo pip3 install mongoengine dnspython
+    sudo pip3 install mongoengine dnspython opencv-contrib-python
 }
 
 # Ubuntu 20, mongoc 1.16.1
@@ -102,4 +102,9 @@ launch_colcon(){
     colcon build
 }
 
-install_mongocxx_dependencies_ubuntu22
+
+# install_kant_dependencies
+# install_mongocxx_dependencies_ubuntu22
+# install_mongodb_22
+# install_kant_dependencies
+launch_colcon
