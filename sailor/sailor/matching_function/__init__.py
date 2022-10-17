@@ -1,2 +1,3 @@
 from sailor.matching_function.matching_function import MatchingFunction
 from sailor.matching_function.fuzzy_matching_function import FuzzyMatchingFunction
+from sailor.matching_function.kmeans_matching_function import KmeansMatchingFunction

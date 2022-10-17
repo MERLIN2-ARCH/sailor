@@ -14,6 +14,7 @@ from kant_dao import ParameterLoader
 from sailor.anchor import Anchor
 from sailor.matching_function import MatchingFunction
 from sailor.matching_function import FuzzyMatchingFunction
+from sailor.matching_function import KmeansMatchingFunction
 
 from sailor_interfaces.msg import Percept
 from sailor_interfaces.msg import PerceptArray
@@ -27,7 +28,7 @@ class AnchoringNode(Node):
         # anchoring
         self.anchors: List[Anchor] = []
         self.cv_bridge = cv_bridge.CvBridge()
-        self.matching_funtion = FuzzyMatchingFunction()
+        self.matching_funtion = MatchingFunction()
 
         # kant
         dao_factory = ParameterLoader(self).get_dao_factory()
@@ -64,6 +65,8 @@ class AnchoringNode(Node):
 
                 # compute similarities
                 similarities = self.compare_anchors(anchor, new_anchor)
+
+                self.get_logger().info(str(similarities))
 
                 # matching function
                 matching_value = self.matching_funtion.match(similarities[0],
