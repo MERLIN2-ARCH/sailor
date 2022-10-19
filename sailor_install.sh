@@ -1,10 +1,11 @@
 
 
-ROS2HOME=~/ros2_humble/
-ROS2HOME_SRC=~/ros2_humble/src
+ROS2HOME=~/ros2_ws/
+ROS2HOME_SRC=~/ros2_ws/src
 
 dowload_sailor_dependencies(){
     cd $ROS2HOME_SRC
+
     git clone git@github.com:uleroboticsgroup/simple_node.git
     git clone git@github.com:uleroboticsgroup/kant.git
     git clone --recurse-submodules https://github.com/mgonzs13/ros2_asus_xtion
@@ -16,13 +17,14 @@ dowload_sailor(){
     cd $ROS2HOME_SRC
     git clone git@github.com:mgonzs13/sailor.git
     # SAILOR dependencies
-    cd sailor 
+    cd src/sailor 
     pip3 install -r sailor/requirements.txt
 }
 
 install_kant_dependencies(){
     # kant dependencies
-    sudo pip3 install mongoengine dnspython opencv-contrib-python
+    sudo apt install python3-pip git python3-rosdep2
+    sudo pip3 install mongoengine dnspython
 }
 
 # Ubuntu 20, mongoc 1.16.1
@@ -69,15 +71,16 @@ install_mongodb_20(){
     echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/$ sources.list.d/mongodb-org-4.4.list
     sudo apt-get update
     sudo apt-get install -y mongodb-org
-    sudo systemctl start mongod
+    sudo systemctl start mongodb
 }
 
 install_mongodb_22(){
     # Ubuntu 22 trick
     # https://askubuntu.com/questions/1403619/mongodb-install-fails-on-ubuntu-22-04-depends-on-libssl1-1-but-it-is-not-insta
-	wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4_amd64.deb
-    sudo dpkg -i ./libssl1.1_1.1.0g-2ubuntu4_amd64.deb
-    rm -i libssl1.1_1.1.0g-2ubuntu4_amd64.deb
+    wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb
+    dpkg -i libssl1.1_1.1.1f-1ubuntu2_amd64.deb
+    rm libssl1.1_1.1.1f-1ubuntu2_amd64.deb
+
     
     # MongoDB
     # https://wiki.crowncloud.net/?How_to_Install_Latest_MongoDB_on_Ubuntu_22_04
@@ -86,7 +89,9 @@ install_mongodb_22(){
     echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
     sudo apt-get update
     sudo apt-get install -y mongodb-org
-    sudo systemctl start mongod
+    sudo systemctl start mongod.service
+    sudo systemctl status mongod.service
+
 }
 
 launch_rosdep(){
@@ -97,14 +102,17 @@ launch_rosdep(){
 
 launch_colcon(){
     # colcon
-    $ROS2HOME
+    cd $ROS2HOME
     colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DDARKNET_OPENCV=Off --packages-select darknet_vendor
     colcon build
 }
 
 
-# install_kant_dependencies
-# install_mongocxx_dependencies_ubuntu22
-# install_mongodb_22
-# install_kant_dependencies
-launch_colcon
+#install_kant_dependencies
+install_mongocxx_dependencies_ubuntu22
+install_mongodb_22
+#dowload_sailor_dependencies
+#dowload_sailor
+#sudo apt-get install python3-rosdep2
+#launch_rosdep
+#launch_colcon
