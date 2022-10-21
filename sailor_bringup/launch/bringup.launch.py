@@ -52,7 +52,7 @@ def generate_launch_description():
         name="features_extractor_node",
         output="screen",
         parameters=[{"target_frame": "base_link",
-                     "maximum_detection_threshold": 0.2,
+                     "maximum_detection_threshold": 0.7,
                      "histogram_bins_per_channel": 8,
                      "class_names": os.path.join(bringup_shared_dir, "config/darknet", "coco.names")}]
     )

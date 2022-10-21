@@ -66,8 +66,6 @@ class AnchoringNode(Node):
                 # compute similarities
                 similarities = self.compare_anchors(anchor, new_anchor)
 
-                self.get_logger().info(str(similarities))
-
                 # matching function
                 matching_value = self.matching_funtion.match(similarities[0],
                                                              similarities[1],
@@ -142,7 +140,15 @@ class AnchoringNode(Node):
         if anchor.class_id != new_anchor.class_id:
             return 0.0
 
-        return 1.0
+        return math.exp(
+            - (
+                abs(
+                    anchor.class_score - new_anchor.class_score
+                ) / (
+                    anchor.class_score + new_anchor.class_score
+                )
+            )
+        )
 
     def compute_color_histogram_similarity(self,
                                            anchor: Anchor,
