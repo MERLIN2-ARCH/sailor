@@ -29,10 +29,10 @@ from sailor_interfaces.msg import Percept
 from sailor_interfaces.msg import PerceptArray
 
 
-class FeaturesExtractorNode(Node):
+class PerceptGeneratorNode(Node):
 
     def __init__(self) -> None:
-        super().__init__("features_extractor_node")
+        super().__init__("percept_generator_node")
 
         # parameters
         self.declare_parameter("target_frame", "base_link")
@@ -43,9 +43,9 @@ class FeaturesExtractorNode(Node):
         self.maximum_detection_threshold = self.get_parameter(
             "maximum_detection_threshold").get_parameter_value().double_value
 
-        self.declare_parameter("histogram_bins_per_channel", 8)
-        self.histogram_bins_per_channel = self.get_parameter(
-            "histogram_bins_per_channel").get_parameter_value().integer_value
+        self.declare_parameter("detection_score_threshold", 0.7)
+        self.detection_score_threshold = self.get_parameter(
+            "detection_score_threshold").get_parameter_value().double_value
 
         self.declare_parameter("class_names", "")
         class_names_files = self.get_parameter(
@@ -94,7 +94,7 @@ class FeaturesExtractorNode(Node):
         for detection in detections_msg.detections:
 
             # create a percept extracting its features
-            new_percept = self.extract_features(
+            new_percept = self.create_percept(
                 image_msg, points_msg, detection)
 
             if not new_percept is None:
@@ -105,23 +105,22 @@ class FeaturesExtractorNode(Node):
 
         self.percepts_pub.publish(percepts_array)
 
-    def extract_features(self,
-                         image: Image,
-                         cloud: PointCloud2,
-                         detection: Detection2D
-                         ) -> Percept:
+    def create_percept(self,
+                       image: Image,
+                       cloud: PointCloud2,
+                       detection: Detection2D
+                       ) -> Percept:
 
         # extract features
-        class_features = self.extract_class_features(detection)
-        physical_features = self.extract_physical_features(cloud, detection)
-        visual_features = self.extract_visual_features(image, detection)
+        class_data = self.get_class_data(detection)
+        physical_features = self.get_physical_features(cloud, detection)
+        cropped_image = self.crop_image(image, detection)
 
-        if (not class_features or not physical_features or not visual_features):
+        if (not physical_features or not class_data):
             return None
 
-        max_class, max_score = class_features
+        max_class, max_score = class_data
         position, size = physical_features
-        histogram, cropped_image = visual_features
 
         if len(cropped_image.data) == 0:
             return None
@@ -171,7 +170,6 @@ class FeaturesExtractorNode(Node):
         msg.size.y = size[1]
         msg.size.z = size[2]
 
-        msg.color_histogram = self.cv_bridge.cv2_to_imgmsg(histogram)
         msg.image = self.cv_bridge.cv2_to_imgmsg(
             cropped_image, encoding=image.encoding)
 
@@ -199,9 +197,9 @@ class FeaturesExtractorNode(Node):
     ###############################
     # methods to extract features #
     ###############################
-    def extract_class_features(self,
-                               detection: Detection2D
-                               ) -> List[Union[str, float]]:
+    def get_class_data(self,
+                       detection: Detection2D
+                       ) -> List[Union[str, float]]:
 
         max_class = None
         max_score = 0.0
@@ -211,12 +209,15 @@ class FeaturesExtractorNode(Node):
                 max_score = hypothesis.hypothesis.score
                 max_class = hypothesis.hypothesis.class_id
 
+        if max_score < self.detection_score_threshold:
+            return None
+
         return [max_class, max_score]
 
-    def extract_physical_features(self,
-                                  cloud: PointCloud2,
-                                  detection: Detection2D
-                                  ) -> List[List[float]]:
+    def get_physical_features(self,
+                              cloud: PointCloud2,
+                              detection: Detection2D
+                              ) -> List[List[float]]:
 
         points = point_cloud2.read_points_list(cloud)
 
@@ -272,10 +273,10 @@ class FeaturesExtractorNode(Node):
 
         return [position, size]
 
-    def extract_visual_features(self,
-                                image: Image,
-                                detection: Detection2D
-                                ) -> List[cv2.Mat]:
+    def crop_image(self,
+                   image: Image,
+                   detection: Detection2D
+                   ) -> cv2.Mat:
 
         bb_min_x = int(detection.bbox.center.x - detection.bbox.size_x / 2.0)
         bb_min_y = int(detection.bbox.center.y - detection.bbox.size_y / 2.0)
@@ -286,24 +287,10 @@ class FeaturesExtractorNode(Node):
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         cropped_image = cv_image[bb_min_y:bb_max_y, bb_min_x:bb_max_x]
 
-        histogram = cv2.calcHist(
-            [cropped_image],
-            [0, 1, 2],
-            None,
-            [
-                self.histogram_bins_per_channel,
-                self.histogram_bins_per_channel,
-                self.histogram_bins_per_channel
-            ],
-            [0, 256, 0, 256, 0, 256])
-
-        histogram = cv2.normalize(
-            histogram, histogram, 0, 256, cv2.NORM_MINMAX)
-
-        return [histogram, cropped_image]
+        return cropped_image
 
 
 def main():
     rclpy.init()
-    rclpy.spin(FeaturesExtractorNode())
+    rclpy.spin(PerceptGeneratorNode())
     rclpy.shutdown()

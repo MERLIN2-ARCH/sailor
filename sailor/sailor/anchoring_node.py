@@ -39,42 +39,21 @@ class AnchoringNode(Node):
         self.matching_threshold = self.get_parameter(
             "matching_threshold").get_parameter_value().double_value
 
+        self.declare_parameter("histogram_bins_per_channel", 256)
+        self.histogram_bins_per_channel = self.get_parameter(
+            "histogram_bins_per_channel").get_parameter_value().integer_value
+
         self.percepts_sub = self.create_subscription(
             PerceptArray, "percepts", self.percepts_cb, 10)
 
     def percepts_cb(self, msg: PerceptArray) -> None:
 
-        # create new anchors from percepts
-        new_anchors = []
-
-        for ele in msg.percepts:
-
-            anchor = self.create_anchor(ele)
-            anchor.last_time_seen = float(
-                msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9)
-
-            new_anchors.append(anchor)
+        new_anchors = self.create_new_anchors(msg)
 
         # compare new anchors
         for new_anchor in new_anchors:
 
-            matching_table = []
-
-            # compare a candidate with all existing anchors
-            for anchor in self.anchors:
-
-                # compute similarities
-                similarities = self.compare_anchors(anchor, new_anchor)
-
-                # matching function
-                matching_value = self.matching_funtion.match(similarities[0],
-                                                             similarities[1],
-                                                             similarities[2],
-                                                             similarities[3],
-                                                             similarities[4])
-
-                if matching_value > self.matching_threshold:
-                    matching_table.append(matching_value)
+            matching_table = self.generate_matching_table(new_anchor)
 
             # acquire
             if not matching_table:
@@ -99,6 +78,40 @@ class AnchoringNode(Node):
                 max_matching_index = matching_table.index(max(matching_table))
                 self.anchors[max_matching_index].update(new_anchor)
 
+    def create_new_anchors(self, msg: PerceptArray) -> List[Anchor]:
+
+        # create new anchors from percepts
+        new_anchors = []
+
+        for ele in msg.percepts:
+
+            anchor = self.create_anchor(ele)
+
+            # create color histogram from cropped image
+            histogram = cv2.calcHist(
+                [cv2.cvtColor(
+                    self.cv_bridge.imgmsg_to_cv2(ele.image),
+                    cv2.COLOR_BGR2HSV
+                )],
+                [0, 1, 2],
+                None,
+                [
+                    self.histogram_bins_per_channel,
+                    self.histogram_bins_per_channel,
+                    self.histogram_bins_per_channel
+                ],
+                [0, 256, 0, 256, 0, 256])
+
+            anchor.color_histogram = histogram
+
+            # get stamp as last time seen
+            anchor.last_time_seen = float(
+                msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9)
+
+            new_anchors.append(anchor)
+
+        return new_anchors
+
     def create_anchor(self, msg: Percept) -> Anchor:
 
         anchor = Anchor()
@@ -106,8 +119,6 @@ class AnchoringNode(Node):
         anchor.class_id = msg.class_id
         anchor.position = [msg.position.x, msg.position.y, msg.position.z]
         anchor.size = [msg.size.x, msg.size.y, msg.size.z]
-        anchor.color_histogram = self.cv_bridge.imgmsg_to_cv2(
-            msg.color_histogram)
 
         anchor.class_name = msg.class_name
         anchor.class_score = msg.class_score
@@ -116,6 +127,30 @@ class AnchoringNode(Node):
             self.cv_bridge.imgmsg_to_cv2(msg.image), cv2.COLOR_BGR2RGB)
 
         return anchor
+
+    def generate_matching_table(self, new_anchor: Anchor) -> List[float]:
+        matching_table = []
+
+        # compare a candidate with all existing anchors
+        for anchor in self.anchors:
+
+            # compute similarities
+            similarities = self.compare_anchors(anchor, new_anchor)
+
+            # matching function
+            matching_value = self.matching_funtion.match(similarities[0],
+                                                         similarities[1],
+                                                         similarities[2],
+                                                         similarities[3],
+                                                         similarities[4])
+
+            self.get_logger().info(str(similarities) + " --> " +
+                                   str(matching_value) + " " + new_anchor.class_name)
+
+            if matching_value > self.matching_threshold:
+                matching_table.append(matching_value)
+
+        return matching_table
 
     ###################################
     # methods to compute similarities #
@@ -197,8 +232,8 @@ class AnchoringNode(Node):
         return (
             2 / (
                 1 + math.exp(
-                    new_anchor.last_time_seen -
-                    anchor.last_time_seen
+                    (new_anchor.last_time_seen -
+                     anchor.last_time_seen) / 60
                 )
             )
         )

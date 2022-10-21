@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'features_extractor_node = sailor.features_extractor_node:main',
+            'percept_generator_node = sailor.percept_generator_node:main',
             'anchoring_node = sailor.anchoring_node:main'
         ],
     },

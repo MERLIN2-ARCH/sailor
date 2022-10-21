@@ -46,14 +46,14 @@ def generate_launch_description():
     #
     # NODES
     #
-    features_extractor_node_cmd = Node(
+    percept_generator_node_cmd = Node(
         package="sailor",
-        executable="features_extractor_node",
-        name="features_extractor_node",
+        executable="percept_generator_node",
+        name="percept_generator_node",
         output="screen",
         parameters=[{"target_frame": "base_link",
-                     "maximum_detection_threshold": 0.7,
-                     "histogram_bins_per_channel": 8,
+                     "maximum_detection_threshold": 0.2,
+                     "detection_score_threshold": 0.7,
                      "class_names": os.path.join(bringup_shared_dir, "config/darknet", "coco.names")}]
     )
 
@@ -63,6 +63,7 @@ def generate_launch_description():
         name="anchoring_node",
         output="screen",
         parameters=[{"matching_threshold": matching_threshold,
+                     "histogram_bins_per_channel": 256,
                      "mongo_uri": mongo_uri,
                      "dao_family": dao_family
                      }]
@@ -108,7 +109,7 @@ def generate_launch_description():
     ld.add_action(dao_family_cmd)
     ld.add_action(mongo_uri_cmd)
 
-    ld.add_action(features_extractor_node_cmd)
+    ld.add_action(percept_generator_node_cmd)
     ld.add_action(anchoring_node_cmd)
     ld.add_action(knowledge_base_node_cmd)
 
