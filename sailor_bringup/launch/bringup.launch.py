@@ -114,7 +114,7 @@ def generate_launch_description():
             "class_names": os.path.join(bringup_shared_dir, "config/darknet", "coco.names"),
             "threshold": "0.25",
             "nms_threshold": "0.50",
-            "show_debug_image": "True",
+            "show_debug_image": "False",
             "input_image_topic": "/camera/rgb/image_raw"
         }.items()
     )

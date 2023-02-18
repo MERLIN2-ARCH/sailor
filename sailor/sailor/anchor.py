@@ -12,8 +12,6 @@ class Anchor:
 
     def update(self, other: "Anchor") -> None:
 
-        #self._symbol = other._symbol
-
         self._class_id = other._class_id
         self._class_name = other._class_name
         self._class_score = other._class_score

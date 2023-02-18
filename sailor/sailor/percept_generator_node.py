@@ -17,11 +17,6 @@ import cv_bridge
 import message_filters
 from sensor_msgs_py import point_cloud2
 
-from rclpy.qos import QoSProfile
-from rclpy.qos import QoSDurabilityPolicy
-from rclpy.qos import QoSHistoryPolicy
-from rclpy.qos import QoSReliabilityPolicy
-
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import PointCloud2
 from vision_msgs.msg import Detection2DArray
@@ -108,7 +103,7 @@ class PerceptGeneratorNode(Node):
                 # create marker
                 marker = Marker()
                 marker.header.frame_id = self.target_frame
-                marker.header.stamp = image_msg.header.stamp
+                marker.header.stamp = self.get_clock().now().to_msg()
 
                 marker.ns = "sailor"
                 marker.id = len(marker_array.markers)
@@ -140,6 +135,7 @@ class PerceptGeneratorNode(Node):
 
         percepts_array.header.frame_id = self.target_frame
         percepts_array.header.stamp = self.get_clock().now().to_msg()
+        percepts_array.original_image = image_msg
 
         self.percepts_pub.publish(percepts_array)
         self.percepts_markers_pub.publish(marker_array)
@@ -190,7 +186,7 @@ class PerceptGeneratorNode(Node):
             size[2] = abs(size[2])
 
         except TransformException as ex:
-            self.get_logger().info(
+            self.get_logger().error(
                 f'Could not transform: {ex}')
             return None
 

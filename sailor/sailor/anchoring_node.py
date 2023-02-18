@@ -2,7 +2,7 @@
 import cv2
 import math
 import cv_bridge
-from PIL import Image
+from PIL import Image as PILImage
 from typing import List
 
 import numpy as np
@@ -23,6 +23,7 @@ import torchvision.transforms as T
 
 from sailor_interfaces.msg import Percept
 from sailor_interfaces.msg import PerceptArray
+from sensor_msgs.msg import Image as Image
 
 
 class AnchoringNode(Node):
@@ -59,17 +60,47 @@ class AnchoringNode(Node):
         self.sailor_net.load_state_dict(torch.load(weights_path), strict=False)
         self.sailor_net.eval()
 
-        # subs
+        # subs and pubs
+        self.anchors_dbg = self.create_publisher(Image, "anchors_dbg", 10)
         self.percepts_sub = self.create_subscription(
             PerceptArray, "percepts", self.percepts_cb, 10)
 
     def percepts_cb(self, msg: PerceptArray) -> None:
 
         new_anchors = self.create_new_anchors(msg)
+        anchors_to_draw = self.process_new_anchors(new_anchors)
+
+        # draw anchors to debug
+        cv_image = self.cv_bridge.imgmsg_to_cv2(msg.original_image)
+
+        for anchor in anchors_to_draw:
+
+            cx = anchor.bounding_box.center.x
+            cy = anchor.bounding_box.center.y
+            sx = anchor.bounding_box.size_x
+            sy = anchor.bounding_box.size_y
+
+            color = (0, 255, 0)
+
+            min_pt = (round(cx - sx / 2.0), round(cy - sy / 2.0))
+            max_pt = (round(cx + sx / 2.0), round(cy + sy / 2.0))
+            cv2.rectangle(cv_image, min_pt, max_pt, color, 2)
+
+            pos = (min_pt[0], max_pt[1])
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(cv_image, anchor.symbol.get_name(),
+                        pos, font, 0.75, color, 1, cv2.LINE_AA)
+
+        dbg_image = self.cv_bridge.cv2_to_imgmsg(
+            cv_image, encoding=msg.original_image.encoding)
+        self.anchors_dbg.publish(dbg_image)
+
+    def process_new_anchors(self, new_anchors: List[Anchor]) -> List[Anchor]:
+        anchors_to_draw = []
 
         # check msg is empty
         if not new_anchors:
-            return
+            return anchors_to_draw
 
         # initial case
         if not self.anchors:
@@ -82,21 +113,19 @@ class AnchoringNode(Node):
             rows_reacquire = np.any(
                 (matching_table > self.matching_threshold), axis=1)
             rows_acquire = ~rows_reacquire
-            self.get_logger().info(str(matching_table))
 
             indexes_to_reacquire = np.where(rows_reacquire)[0].tolist()
             indexes_to_acquire = np.where(rows_acquire)[0].tolist()
 
         # acquire
         for i_percept in indexes_to_acquire:
-            self.acquire(new_anchors[i_percept])
-            self.get_logger().info("Early Acquire")
+            new_anchor = self.acquire(new_anchors[i_percept])
+            self.get_logger().info("Acquire")
+            anchors_to_draw.append(new_anchor)
 
         # reacquire
-        if matching_table is None:
-            return
-        if not rows_reacquire:
-            return
+        if matching_table is None or not rows_reacquire:
+            return anchors_to_draw
 
         reacquire_table = matching_table[rows_reacquire]
         row_ind, col_ind = hungarian_method(reacquire_table, True)
@@ -109,12 +138,16 @@ class AnchoringNode(Node):
                 # reacquire --> update the existing anchor
                 self.anchors[col_ind[i]].update(new_anchor)
                 self.get_logger().info("Reacquire")
+                anchors_to_draw.append(self.anchors[col_ind[i]])
 
             else:
                 # reacquire hungarian method does not found a match
                 # this happen if number of percepts > number of anchors
-                self.acquire(new_anchor)
-                self.get_logger().info("Late Acquire")
+                new_anchor = self.acquire(new_anchor)
+                self.get_logger().info("Acquire")
+                anchors_to_draw.append(new_anchor)
+
+        return anchors_to_draw
 
     def acquire(self, new_anchor: Anchor) -> None:
 
@@ -181,7 +214,7 @@ class AnchoringNode(Node):
                 T.ToTensor()
             ]
         )
-        return transform(Image.fromarray(image)).to(self.torch_device)
+        return transform(PILImage.fromarray(image)).to(self.torch_device)
 
     def calculate_distance(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
         return torch.FloatTensor(
