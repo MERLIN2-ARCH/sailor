@@ -1,3 +1,5 @@
 opencv-python
-scikit-fuzzy
-scikit-learn
+PIL
+scipy
+torch
+torchvision

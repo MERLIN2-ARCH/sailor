@@ -7,7 +7,6 @@ from launch_ros.actions import Node
 from launch.conditions import LaunchConfigurationEquals
 from launch.substitutions import LaunchConfiguration
 
-
 from kant_dao.dao_factory import DaoFamilies
 
 
@@ -30,6 +29,20 @@ def generate_launch_description():
         "matching_threshold",
         default_value="0.5",
         description="Matching threshold for anchoring process")
+
+    torch_device = LaunchConfiguration("torch_device")
+    torch_device_cmd = DeclareLaunchArgument(
+        "torch_device",
+        default_value="cuda:0",
+        description="The device used in Pytorch (cuda, cpu)")
+
+    weights_path = LaunchConfiguration("weights_path")
+    weights_path_cmd = DeclareLaunchArgument(
+        "weights_path",
+        default_value=os.path.join(
+            bringup_shared_dir, "weights/mix/dl_model.pth"
+        ),
+        description="Path to the weights")
 
     dao_family = LaunchConfiguration("dao_family")
     dao_family_cmd = DeclareLaunchArgument(
@@ -63,9 +76,10 @@ def generate_launch_description():
         name="anchoring_node",
         output="screen",
         parameters=[{"matching_threshold": matching_threshold,
-                     "histogram_bins_per_channel": 256,
+                     "torch_device": torch_device,
+                     "weights_path": weights_path,
                      "mongo_uri": mongo_uri,
-                     "dao_family": dao_family
+                     "dao_family": dao_family,
                      }]
     )
 
@@ -106,6 +120,8 @@ def generate_launch_description():
     ld.add_action(stdout_linebuf_envvar)
 
     ld.add_action(matching_threshold_cmd)
+    ld.add_action(torch_device_cmd)
+    ld.add_action(weights_path_cmd)
     ld.add_action(dao_family_cmd)
     ld.add_action(mongo_uri_cmd)
 

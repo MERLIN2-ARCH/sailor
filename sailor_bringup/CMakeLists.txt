@@ -32,7 +32,7 @@ endif()
 
 # install the launch directory
 install(DIRECTORY
-  launch config
+  launch config weights
   DESTINATION share/${PROJECT_NAME}/
 )
 

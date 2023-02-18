@@ -12,20 +12,20 @@ class Anchor:
 
     def update(self, other: "Anchor") -> None:
 
-        self.class_id = other.class_id
-        self.class_name = other.class_name
-        self.class_score = other.class_score
-        self.bounding_box = other.bounding_box
+        #self._symbol = other._symbol
 
-        self.position = other.position
-        self.size = other.size
+        self._class_id = other._class_id
+        self._class_name = other._class_name
+        self._class_score = other._class_score
 
-        self.color_histogram = other.color_histogram
-        self.image = other.image
+        self._bounding_box = other._bounding_box
+        self._image = other._image
 
-        self.last_time_seen = other.last_time_seen
+        self._position = other._position
+        self._size = other._size
 
-    ### symbolic ###
+        self._timestamp = other._timestamp
+
     @property
     def symbol(self) -> PddlObjectDto:
         return self._symbol
@@ -34,7 +34,6 @@ class Anchor:
     def symbol(self, symbol: PddlObjectDto) -> None:
         self._symbol = symbol
 
-    ### features ###
     @property
     def class_id(self) -> int:
         return self._class_id
@@ -43,39 +42,6 @@ class Anchor:
     def class_id(self, class_id: int) -> None:
         self._class_id = class_id
 
-    @property
-    def position(self) -> List[float]:
-        return self._position
-
-    @position.setter
-    def position(self, position: List[float]) -> None:
-        self._position = position
-
-    @property
-    def size(self) -> List[float]:
-        return self._size
-
-    @size.setter
-    def size(self, size: List[float]) -> None:
-        self._size = size
-
-    @property
-    def last_time_seen(self) -> float:
-        return self._last_time_seen
-
-    @last_time_seen.setter
-    def last_time_seen(self, last_time_seen: float) -> None:
-        self._last_time_seen = last_time_seen
-
-    @property
-    def color_histogram(self) -> cv2.Mat:
-        return self._color_histogram
-
-    @color_histogram.setter
-    def color_histogram(self, color_histogram: cv2.Mat) -> None:
-        self._color_histogram = color_histogram
-
-    ### aux ###
     @property
     def class_name(self) -> str:
         return self._class_name
@@ -107,3 +73,27 @@ class Anchor:
     @image.setter
     def image(self, image: cv2.Mat) -> None:
         self._image = image
+
+    @property
+    def position(self) -> List[float]:
+        return self._position
+
+    @position.setter
+    def position(self, position: List[float]) -> None:
+        self._position = position
+
+    @property
+    def size(self) -> List[float]:
+        return self._size
+
+    @size.setter
+    def size(self, size: List[float]) -> None:
+        self._size = size
+
+    @property
+    def timestamp(self) -> float:
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, timestamp: float) -> None:
+        self._timestamp = timestamp
