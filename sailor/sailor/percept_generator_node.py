@@ -106,7 +106,6 @@ class PerceptGeneratorNode(Node):
                 percepts_array.percepts.append(new_percept)
 
                 # create marker
-
                 marker = Marker()
                 marker.header.frame_id = self.target_frame
                 marker.header.stamp = image_msg.header.stamp
