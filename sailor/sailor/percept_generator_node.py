@@ -6,6 +6,8 @@ from typing import Union
 
 import rclpy
 from rclpy.node import Node
+from rclpy.duration import Duration
+from rclpy.qos import qos_profile_sensor_data
 
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
@@ -24,6 +26,9 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import PointCloud2
 from vision_msgs.msg import Detection2DArray
 from vision_msgs.msg import Detection2D
+
+from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
 
 from sailor_interfaces.msg import Percept
 from sailor_interfaces.msg import PerceptArray
@@ -62,25 +67,24 @@ class PerceptGeneratorNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        # pub
+        # pubs
         self.percepts_pub = self.create_publisher(PerceptArray, "percepts", 10)
+        self.percepts_markers_pub = self.create_publisher(
+            MarkerArray, "percepts_markers", 10)
 
         # subscribers
-        sensor_qos = QoSProfile(
-            history=QoSHistoryPolicy.KEEP_LAST,
-            durability=QoSDurabilityPolicy.VOLATILE,
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            depth=1)
-
         self.image_sub = message_filters.Subscriber(
-            self, Image, "/camera/rgb/image_raw", qos_profile=sensor_qos)
+            self, Image, "/camera/rgb/image_raw",
+            qos_profile=qos_profile_sensor_data)
         self.points_sub = message_filters.Subscriber(
-            self, PointCloud2, "/camera/depth_registered/points", qos_profile=sensor_qos)
+            self, PointCloud2, "/camera/depth_registered/points",
+            qos_profile=qos_profile_sensor_data)
         self.detections_sub = message_filters.Subscriber(
-            self, Detection2DArray, "/darknet/detections", qos_profile=sensor_qos)
+            self, Detection2DArray, "/darknet/detections",
+            qos_profile=qos_profile_sensor_data)
 
         self._synchronizer = message_filters.ApproximateTimeSynchronizer(
-            (self.image_sub, self.points_sub, self.detections_sub), 10, 0.5)
+            (self.image_sub, self.points_sub, self.detections_sub), 30, 0.5)
         self._synchronizer.registerCallback(self.on_detections)
 
     def on_detections(self,
@@ -90,6 +94,7 @@ class PerceptGeneratorNode(Node):
                       ) -> None:
 
         percepts_array = PerceptArray()
+        marker_array = MarkerArray()
 
         for detection in detections_msg.detections:
 
@@ -100,10 +105,45 @@ class PerceptGeneratorNode(Node):
             if not new_percept is None:
                 percepts_array.percepts.append(new_percept)
 
+                # create marker
+
+                marker = Marker()
+                marker.header.frame_id = self.target_frame
+                marker.header.stamp = image_msg.header.stamp
+
+                marker.ns = "sailor"
+                marker.id = len(marker_array.markers)
+                marker.type = Marker.CUBE
+                marker.action = Marker.ADD
+                marker.frame_locked = False
+
+                marker.pose.position.x = new_percept.position.x
+                marker.pose.position.y = new_percept.position.y
+                marker.pose.position.z = new_percept.position.z
+
+                marker.pose.orientation.x = 0.0
+                marker.pose.orientation.y = 0.0
+                marker.pose.orientation.z = 0.0
+                marker.pose.orientation.w = 1.0
+                marker.scale.x = new_percept.size.x
+                marker.scale.y = new_percept.size.y
+                marker.scale.z = new_percept.size.z
+
+                marker.color.b = 0.0
+                marker.color.g = new_percept.class_score * 255.0
+                marker.color.r = (1.0 - new_percept.class_score) * 255.0
+                marker.color.a = 0.4
+
+                marker.lifetime = Duration(seconds=1.0).to_msg()
+                marker.text = new_percept.class_name
+
+                marker_array.markers.append(marker)
+
         percepts_array.header.frame_id = self.target_frame
         percepts_array.header.stamp = self.get_clock().now().to_msg()
 
         self.percepts_pub.publish(percepts_array)
+        self.percepts_markers_pub.publish(marker_array)
 
     def create_percept(self,
                        image: Image,

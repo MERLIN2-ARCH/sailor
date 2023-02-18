@@ -221,7 +221,6 @@ class AnchoringNode(Node):
             "distance": self.calculate_distance(new_anchor, anchor).unsqueeze(0),
             "scale_factor": self.calculate_scale_factor(new_anchor, anchor).unsqueeze(0),
             "time": self.time_difference(new_anchor, anchor).unsqueeze(0)
-
         }
 
         # matching function

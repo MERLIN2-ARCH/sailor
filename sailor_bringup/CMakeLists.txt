@@ -32,7 +32,7 @@ endif()
 
 # install the launch directory
 install(DIRECTORY
-  launch config weights
+  launch config weights rviz
   DESTINATION share/${PROJECT_NAME}/
 )
 

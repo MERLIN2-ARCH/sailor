@@ -91,6 +91,16 @@ def generate_launch_description():
             "dao_family", str(int(DaoFamilies.ROS2)))
     )
 
+    rviz_cmd = Node(
+        name="rviz",
+        package="rviz2",
+        executable="rviz2",
+        arguments=["-d", os.path.join(
+            bringup_shared_dir,
+            "rviz",
+            "default.rviz")]
+    )
+
     #
     # LAUNCHES
     #
@@ -128,6 +138,7 @@ def generate_launch_description():
     ld.add_action(percept_generator_node_cmd)
     ld.add_action(anchoring_node_cmd)
     ld.add_action(knowledge_base_node_cmd)
+    ld.add_action(rviz_cmd)
 
     ld.add_action(darknet_action_cmd)
     ld.add_action(asus_xtion_action_cmd)
