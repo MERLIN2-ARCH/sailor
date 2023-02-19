@@ -57,7 +57,7 @@ class AnchoringNode(Node):
         # matching function
         self.sailor_net = SailorNet()
         self.sailor_net.to(self.torch_device)
-        self.sailor_net.load_state_dict(torch.load(weights_path), strict=False)
+        self.sailor_net.load_state_dict(torch.load(weights_path))
         self.sailor_net.eval()
 
         # subs and pubs

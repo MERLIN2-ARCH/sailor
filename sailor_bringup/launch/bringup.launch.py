@@ -66,7 +66,7 @@ def generate_launch_description():
         output="screen",
         parameters=[{"target_frame": "base_link",
                      "maximum_detection_threshold": 0.2,
-                     "detection_score_threshold": 0.7,
+                     "detection_score_threshold": 0.5,
                      "class_names": os.path.join(bringup_shared_dir, "config/darknet", "coco.names")}]
     )
 
