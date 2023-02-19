@@ -84,12 +84,13 @@ class AnchoringNode(Node):
 
             min_pt = (round(cx - sx / 2.0), round(cy - sy / 2.0))
             max_pt = (round(cx + sx / 2.0), round(cy + sy / 2.0))
-            cv2.rectangle(cv_image, min_pt, max_pt, color, 2)
+            cv2.rectangle(cv_image, min_pt, max_pt, color, 3)
 
-            pos = (min_pt[0], max_pt[1])
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(cv_image, anchor.symbol.get_name(),
-                        pos, font, 0.75, color, 1, cv2.LINE_AA)
+            text = anchor.symbol.get_name()
+            textsize = cv2.getTextSize(text, font, 1, 2)[0]
+            pos = (int(cx - textsize[0] / 2), int(cy - textsize[1] / 2))
+            cv2.putText(cv_image, text, pos, font, 1, color, 2, cv2.LINE_AA)
 
         dbg_image = self.cv_bridge.cv2_to_imgmsg(
             cv_image, encoding=msg.original_image.encoding)
@@ -167,6 +168,8 @@ class AnchoringNode(Node):
         self.object_dao.save(new_object)
 
         self.anchors.append(new_anchor)
+
+        return new_anchor
 
     # create new anchors from percepts
     def create_new_anchors(self, msg: PerceptArray) -> List[Anchor]:
