@@ -16,7 +16,6 @@ from tf2_ros.transform_listener import TransformListener
 
 import cv_bridge
 import message_filters
-from sensor_msgs_py import point_cloud2
 
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import PointCloud2

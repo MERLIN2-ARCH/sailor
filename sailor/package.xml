@@ -15,7 +15,6 @@
   <depend>tf2_ros</depend>
   <depend>message_filters</depend>
   <depend>cv_bridge</depend>
-  <depend>sensor_msgs_py</depend>
   <depend>sensor_msgs</depend>
   <depend>vision_msgs</depend>
   <depend>sailor_interfaces</depend>
