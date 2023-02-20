@@ -1,6 +1,5 @@
 
 import cv2
-import math
 import numpy as np
 from typing import List
 from typing import Union

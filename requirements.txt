@@ -1,5 +1,6 @@
-opencv-python
+numpy
 PIL
+opencv-python
 scipy
 torch
 torchvision
