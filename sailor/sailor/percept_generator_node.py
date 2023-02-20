@@ -340,9 +340,6 @@ class PerceptGeneratorNode(Node):
             float(max_y - min_y),
             float(max_z - min_z)]
 
-        if math.isnan(position[0]) or math.isnan(position[1]) or math.isnan(position[2]):
-            return None
-
         return [position, size]
 
     def crop_image(self,
