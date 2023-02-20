@@ -1,6 +1,7 @@
 
 import cv2
 import math
+import numpy as np
 from typing import List
 from typing import Union
 
@@ -91,13 +92,68 @@ class PerceptGeneratorNode(Node):
         percepts_array = PerceptArray()
         marker_array = MarkerArray()
 
+        # convert image
+        cv_image = self.cv_bridge.imgmsg_to_cv2(image_msg)
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+
+        # convert pointcloud
+        points = np.array(list(point_cloud2.read_points(points_msg))).reshape(
+            points_msg.height, points_msg.width, 4)
+
+        # transform position to target_frame
+        transform = None
+        try:
+            now = rclpy.time.Time()
+            transform = self.tf_buffer.lookup_transform(
+                self.target_frame,
+                points_msg.header.frame_id,
+                now)
+
+        except TransformException as ex:
+            self.get_logger().error(
+                f'Could not transform: {ex}')
+            return None
+
         for detection in detections_msg.detections:
 
             # create a percept extracting its features
             new_percept = self.create_percept(
-                image_msg, points_msg, detection)
+                cv_image, points, detection)
 
             if not new_percept is None:
+
+                # rotate ans tranlate position and size
+                position = self.qv_mult([transform.transform.rotation.w,
+                                         transform.transform.rotation.x,
+                                         transform.transform.rotation.y,
+                                         transform.transform.rotation.z],
+                                        [new_percept.position.x,
+                                         new_percept.position.y,
+                                         new_percept.position.z])
+
+                size = self.qv_mult([transform.transform.rotation.w,
+                                     transform.transform.rotation.x,
+                                     transform.transform.rotation.y,
+                                     transform.transform.rotation.z],
+                                    [new_percept.size.x,
+                                     new_percept.size.y,
+                                     new_percept.size.z])
+
+                size[0] = abs(size[0])
+                size[1] = abs(size[1])
+                size[2] = abs(size[2])
+
+                new_percept.position.x = position[0] + \
+                    transform.transform.translation.x
+                new_percept.position.y = position[1] + \
+                    transform.transform.translation.y
+                new_percept.position.z = position[2] + \
+                    transform.transform.translation.z
+
+                new_percept.size.x = size[0]
+                new_percept.size.y = size[1]
+                new_percept.size.z = size[2]
+
                 percepts_array.percepts.append(new_percept)
 
                 # create marker
@@ -141,15 +197,15 @@ class PerceptGeneratorNode(Node):
         self.percepts_markers_pub.publish(marker_array)
 
     def create_percept(self,
-                       image: Image,
-                       cloud: PointCloud2,
+                       cv_image: cv2.Mat,
+                       points: np.ndarray,
                        detection: Detection2D
                        ) -> Percept:
 
         # extract features
         class_data = self.get_class_data(detection)
-        physical_features = self.get_physical_features(cloud, detection)
-        cropped_image = self.crop_image(image, detection)
+        physical_features = self.get_physical_features(points, detection)
+        cropped_image = self.crop_image(cv_image, detection)
 
         if (not physical_features or not class_data):
             return None
@@ -158,36 +214,6 @@ class PerceptGeneratorNode(Node):
         position, size = physical_features
 
         if len(cropped_image.data) == 0:
-            return None
-
-        # transform position to target_frame
-        try:
-            now = rclpy.time.Time()
-            trans = self.tf_buffer.lookup_transform(
-                self.target_frame,
-                cloud.header.frame_id,
-                now)
-
-            # rotate and translate position and size
-            position = self.qv_mult([trans.transform.rotation.w,
-                                     trans.transform.rotation.x,
-                                     trans.transform.rotation.y,
-                                     trans.transform.rotation.z],
-                                    position)
-
-            size = self.qv_mult([trans.transform.rotation.w,
-                                 trans.transform.rotation.x,
-                                 trans.transform.rotation.y,
-                                 trans.transform.rotation.z],
-                                size)
-
-            size[0] = abs(size[0])
-            size[1] = abs(size[1])
-            size[2] = abs(size[2])
-
-        except TransformException as ex:
-            self.get_logger().error(
-                f'Could not transform: {ex}')
             return None
 
         # create percept message
@@ -205,8 +231,7 @@ class PerceptGeneratorNode(Node):
         msg.size.y = size[1]
         msg.size.z = size[2]
 
-        msg.image = self.cv_bridge.cv2_to_imgmsg(
-            cropped_image, encoding=image.encoding)
+        msg.image = cropped_image
 
         return msg
 
@@ -250,11 +275,9 @@ class PerceptGeneratorNode(Node):
         return [max_class, max_score]
 
     def get_physical_features(self,
-                              cloud: PointCloud2,
+                              points: np.ndarray,
                               detection: Detection2D
                               ) -> List[List[float]]:
-
-        points = point_cloud2.read_points_list(cloud)
 
         max_x = max_y = max_z = -float("inf")
         min_x = min_y = min_z = float("inf")
@@ -269,34 +292,32 @@ class PerceptGeneratorNode(Node):
         bb_max_x = int(center_x + size_x / 2.0)
         bb_max_y = int(center_y + size_y / 2.0)
 
-        center_point = points[int((center_y * cloud.width) + center_x)]
+        center_point = points[int(center_y)][int(center_x)]
 
-        if math.isnan(center_point.z):
+        if math.isnan(center_point[2]):
             return None
 
         for i in range(bb_min_y, bb_max_y):
             for j in range(bb_min_x, bb_max_x):
 
-                pc_index = (i * cloud.width) + j
-
-                if pc_index >= len(points):
+                if i >= points.shape[0] or j >= points.shape[1]:
                     continue
 
-                pc_point = points[pc_index]
+                pc_point = points[i][j]
 
-                if math.isnan(pc_point.z):
+                if math.isnan(pc_point[2]):
                     continue
 
-                if abs(pc_point.z - center_point.z) > self.maximum_detection_threshold:
+                if abs(pc_point[2] - center_point[2]) > self.maximum_detection_threshold:
                     continue
 
-                max_x = max(pc_point.x, max_x)
-                max_y = max(pc_point.y, max_y)
-                max_z = max(pc_point.z, max_z)
+                max_x = max(pc_point[0], max_x)
+                max_y = max(pc_point[1], max_y)
+                max_z = max(pc_point[2], max_z)
 
-                min_x = min(pc_point.x, min_x)
-                min_y = min(pc_point.y, min_y)
-                min_z = min(pc_point.z, min_z)
+                min_x = min(pc_point[0], min_x)
+                min_y = min(pc_point[1], min_y)
+                min_z = min(pc_point[2], min_z)
 
         position = [(max_x + min_x) / 2,
                     (max_y + min_y) / 2,
@@ -309,20 +330,18 @@ class PerceptGeneratorNode(Node):
         return [position, size]
 
     def crop_image(self,
-                   image: Image,
+                   cv_image: cv2.Mat,
                    detection: Detection2D
-                   ) -> cv2.Mat:
+                   ) -> Image:
 
         bb_min_x = int(detection.bbox.center.x - detection.bbox.size_x / 2.0)
         bb_min_y = int(detection.bbox.center.y - detection.bbox.size_y / 2.0)
         bb_max_x = int(detection.bbox.center.x + detection.bbox.size_x / 2.0)
         bb_max_y = int(detection.bbox.center.y + detection.bbox.size_y / 2.0)
 
-        cv_image = self.cv_bridge.imgmsg_to_cv2(image)
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         cropped_image = cv_image[bb_min_y:bb_max_y, bb_min_x:bb_max_x]
 
-        return cropped_image
+        return self.cv_bridge.cv2_to_imgmsg(cropped_image)
 
 
 def main():
