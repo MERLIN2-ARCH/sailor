@@ -97,8 +97,8 @@ class PerceptGeneratorNode(Node):
         cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         # convert pointcloud
-        points = np.array(list(point_cloud2.read_points(points_msg))).reshape(
-            points_msg.height, points_msg.width, 4)
+        points = np.frombuffer(points_msg.data, dtype=np.float32).reshape(
+            points_msg.height, points_msg.width, -1)
 
         # transform position to target_frame
         transform = None
@@ -114,6 +114,7 @@ class PerceptGeneratorNode(Node):
                 f'Could not transform: {ex}')
             return None
 
+        # loop detections
         for detection in detections_msg.detections:
 
             # create a percept extracting its features
@@ -204,17 +205,19 @@ class PerceptGeneratorNode(Node):
 
         # extract features
         class_data = self.get_class_data(detection)
-        physical_features = self.get_physical_features(points, detection)
-        cropped_image = self.crop_image(cv_image, detection)
+        if not class_data:
+            return None
 
-        if (not physical_features or not class_data):
+        physical_features = self.get_physical_features(points, detection)
+        if not physical_features:
+            return None
+
+        cropped_image = self.crop_image(cv_image, detection)
+        if len(cropped_image.data) == 0:
             return None
 
         max_class, max_score = class_data
         position, size = physical_features
-
-        if len(cropped_image.data) == 0:
-            return None
 
         # create percept message
         msg = Percept()
@@ -279,9 +282,6 @@ class PerceptGeneratorNode(Node):
                               detection: Detection2D
                               ) -> List[List[float]]:
 
-        max_x = max_y = max_z = -float("inf")
-        min_x = min_y = min_z = float("inf")
-
         center_x = detection.bbox.center.x
         center_y = detection.bbox.center.y
         size_x = detection.bbox.size_x
@@ -294,35 +294,52 @@ class PerceptGeneratorNode(Node):
 
         center_point = points[int(center_y)][int(center_x)]
 
-        if math.isnan(center_point[2]):
+        # masks for limiting the pc using bounding box
+        mask_y = np.logical_and(bb_min_y <= np.arange(
+            points.shape[0]), np.arange(points.shape[0]) < bb_max_y)
+        mask_x = np.logical_and(bb_min_x <= np.arange(
+            points.shape[1]), np.arange(points.shape[1]) < bb_max_x)
+
+        mask = np.ix_(mask_y, mask_x)
+        points_masked = points[mask]
+
+        # maximum_detection_threshold
+        z_masked = points_masked[..., 2]
+        z_masked_not_nan = ~np.isnan(z_masked)
+        z_diff = np.abs(z_masked - center_point[2])
+        z_diff_below_threshold = z_diff <= self.maximum_detection_threshold
+
+        valid_mask = np.logical_and(z_masked_not_nan, z_diff_below_threshold)
+        valid_indices = np.argwhere(valid_mask)
+
+        # max and min values
+        if (
+            points_masked[valid_mask, 0].size == 0 or
+            points_masked[valid_mask, 1].size == 0 or
+            points_masked[valid_indices[:, 0],
+                          valid_indices[:, 1], 2].size == 0
+        ):
             return None
 
-        for i in range(bb_min_y, bb_max_y):
-            for j in range(bb_min_x, bb_max_x):
+        max_x = np.max(points_masked[valid_mask, 0])
+        max_y = np.max(points_masked[valid_mask, 1])
+        max_z = np.max(
+            points_masked[valid_indices[:, 0], valid_indices[:, 1], 2])
 
-                if i >= points.shape[0] or j >= points.shape[1]:
-                    continue
+        min_x = np.min(points_masked[valid_mask, 0])
+        min_y = np.min(points_masked[valid_mask, 1])
+        min_z = np.min(
+            points_masked[valid_indices[:, 0], valid_indices[:, 1], 2])
 
-                pc_point = points[i][j]
-
-                if math.isnan(pc_point[2]):
-                    continue
-
-                if abs(pc_point[2] - center_point[2]) > self.maximum_detection_threshold:
-                    continue
-
-                max_x = max(pc_point[0], max_x)
-                max_y = max(pc_point[1], max_y)
-                max_z = max(pc_point[2], max_z)
-
-                min_x = min(pc_point[0], min_x)
-                min_y = min(pc_point[1], min_y)
-                min_z = min(pc_point[2], min_z)
-
-        position = [(max_x + min_x) / 2,
-                    (max_y + min_y) / 2,
-                    (max_z + min_z) / 2]
-        size = [max_x - min_x, max_y - min_y, max_z - min_z]
+        position = [
+            float((max_x + min_x) / 2),
+            float((max_y + min_y) / 2),
+            float((max_z + min_z) / 2)
+        ]
+        size = [
+            float(max_x - min_x),
+            float(max_y - min_y),
+            float(max_z - min_z)]
 
         if math.isnan(position[0]) or math.isnan(position[1]) or math.isnan(position[2]):
             return None
