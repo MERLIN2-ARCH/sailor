@@ -211,7 +211,7 @@ class PerceptGeneratorNode(Node):
             return None
 
         cropped_image = self.crop_image(cv_image, detection)
-        if len(cropped_image.data) == 0:
+        if cropped_image is None or len(cropped_image.data) == 0:
             return None
 
         max_class, max_score = class_data
@@ -353,7 +353,10 @@ class PerceptGeneratorNode(Node):
 
         cropped_image = cv_image[bb_min_y:bb_max_y, bb_min_x:bb_max_x]
 
-        return self.cv_bridge.cv2_to_imgmsg(cropped_image)
+        try:
+            return self.cv_bridge.cv2_to_imgmsg(cropped_image)
+        except ZeroDivisionError:
+            return None
 
 
 def main():

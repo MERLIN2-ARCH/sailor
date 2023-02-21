@@ -103,54 +103,49 @@ class AnchoringNode(Node):
         if not new_anchors:
             return anchors_to_draw
 
-        # initial case
+        # initial case when there are not anchors
         if not self.anchors:
-            indexes_to_acquire = range(len(new_anchors))
-            matching_table = None
 
-        # compare new anchors
-        else:
-            matching_table = self.create_matching_table(new_anchors)
-            rows_reacquire = np.any(
-                (matching_table > self.matching_threshold), axis=1)
-            rows_acquire = ~rows_reacquire
+            for new_anchor in new_anchors:
+                new_anchor = self.acquire(new_anchor)
+                anchors_to_draw.append(new_anchor)
 
-            indexes_to_reacquire = np.where(rows_reacquire)[0].tolist()
-            indexes_to_acquire = np.where(rows_acquire)[0].tolist()
-
-        # acquire
-        for i_percept in indexes_to_acquire:
-            new_anchor = self.acquire(new_anchors[i_percept])
-            self.get_logger().info("Acquire")
-            anchors_to_draw.append(new_anchor)
-
-        # reacquire
-        if matching_table is None or not rows_reacquire:
             return anchors_to_draw
 
-        reacquire_table = matching_table[rows_reacquire]
-        row_ind, col_ind = hungarian_method(reacquire_table, True)
+        # compare new anchors
+        matching_table = self.create_matching_table(new_anchors)
 
-        for i in range(reacquire_table.shape[0]):
+        row_ind, col_ind = hungarian_method(matching_table, True)
 
-            new_anchor = new_anchors[indexes_to_reacquire[i]]
+        for i in range(matching_table.shape[0]):
+
+            new_anchor = new_anchors[i]
 
             if i in row_ind:
-                # reacquire --> update the existing anchor
-                self.anchors[col_ind[i]].update(new_anchor)
-                self.get_logger().info("Reacquire")
-                anchors_to_draw.append(self.anchors[col_ind[i]])
+
+                col = col_ind[np.where(row_ind == i)[0].tolist()[0]]
+                matching_value = matching_table[i][col]
+
+                if matching_value > self.matching_threshold:
+                    # reacquire --> update the existing anchor
+                    self.anchors[col].update(new_anchor)
+                    self.get_logger().info("Reacquire")
+                    anchors_to_draw.append(self.anchors[col_ind[i]])
+
+                else:
+                    self.acquire(new_anchor)
 
             else:
                 # reacquire hungarian method does not found a match
                 # this happen if number of percepts > number of anchors
                 new_anchor = self.acquire(new_anchor)
-                self.get_logger().info("Acquire")
                 anchors_to_draw.append(new_anchor)
 
         return anchors_to_draw
 
     def acquire(self, new_anchor: Anchor) -> None:
+
+        self.get_logger().info("Acquire")
 
         # get new object name
         counter = 0
