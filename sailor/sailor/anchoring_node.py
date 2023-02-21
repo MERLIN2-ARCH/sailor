@@ -123,14 +123,14 @@ class AnchoringNode(Node):
 
             if i in row_ind:
 
-                col = col_ind[np.where(row_ind == i)[0].tolist()[0]]
-                matching_value = matching_table[i][col]
+                j = col_ind[i]
+                matching_value = matching_table[i][j]
 
-                if matching_value > self.matching_threshold:
+                if matching_value >= self.matching_threshold:
                     # reacquire --> update the existing anchor
-                    self.anchors[col].update(new_anchor)
+                    self.anchors[j].update(new_anchor)
                     self.get_logger().info("Reacquire")
-                    anchors_to_draw.append(self.anchors[col_ind[i]])
+                    anchors_to_draw.append(self.anchors[j])
 
                 else:
                     self.acquire(new_anchor)
