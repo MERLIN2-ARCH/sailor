@@ -21,8 +21,8 @@ from sailor.sailor_net import SailorNet
 import torch
 import torchvision.transforms as T
 
-from sailor_interfaces.msg import Percept
-from sailor_interfaces.msg import PerceptArray
+from sailor_msgs.msg import Percept
+from sailor_msgs.msg import PerceptArray
 from sensor_msgs.msg import Image as Image
 
 

@@ -17,7 +17,7 @@
   <depend>cv_bridge</depend>
   <depend>sensor_msgs</depend>
   <depend>vision_msgs</depend>
-  <depend>sailor_interfaces</depend>
+  <depend>sailor_msgs</depend>
   <depend>simple_node</depend>
   <depend>kant_dto</depend>
   <depend>kant_dao</depend>

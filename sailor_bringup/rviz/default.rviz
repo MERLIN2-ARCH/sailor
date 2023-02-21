@@ -8,6 +8,7 @@ Panels:
         - /Image1/Topic1
         - /TF1/Frames1
         - /PointCloud21/Topic1
+        - /Image2/Status1
       Splitter Ratio: 0.429983526468277
     Tree Height: 70
   - Class: rviz_common/Selection
@@ -144,7 +145,7 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        sailor: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -198,7 +199,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /darknet/dbg_images
+        Value: /yolo/dbg_image
       Value: true
   Enabled: true
   Global Options:

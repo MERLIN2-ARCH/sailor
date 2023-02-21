@@ -12,8 +12,8 @@ from kant_dao.dao_factory import DaoFamilies
 
 def generate_launch_description():
 
-    darknet_shared_dir = get_package_share_directory(
-        "darknet_bringup")
+    yolo_shared_dir = get_package_share_directory(
+        "yolov8_bringup")
     asus_xtion_shared_dir = get_package_share_directory(
         "asus_xtion")
     bringup_shared_dir = get_package_share_directory(
@@ -101,31 +101,21 @@ def generate_launch_description():
             "default.rviz")]
     )
 
-    detection_visualizer_cmd = Node(
-        package="detection_visualizer",
-        executable="detection_visualizer",
-        name="detection_visualizer",
-        namespace="darknet",
-        parameters=[{"class_names": os.path.join(
-            bringup_shared_dir, "config/darknet", "coco.names")}],
-        remappings=[("images", "/camera/rgb/image_raw")]
-    )
-
     #
     # LAUNCHES
     #
-    darknet_action_cmd = IncludeLaunchDescription(
+    yolo_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(darknet_shared_dir, "launch",
-                         "darknet.launch.py")),
+            os.path.join(yolo_shared_dir, "launch",
+                         "yolov8.launch.py")),
         launch_arguments={
-            "network_config": os.path.join(bringup_shared_dir, "config/darknet", "yolov3-tiny.cfg"),
-            "weights": os.path.join(bringup_shared_dir, "config/darknet", "yolov3-tiny.weights"),
-            "class_names": os.path.join(bringup_shared_dir, "config/darknet", "coco.names"),
-            "threshold": "0.25",
+            "model": "yolov8x.pt",
+            "device": torch_device,
+            "enable": "True",
+            "threshold": "0.5",
             "nms_threshold": "0.50",
-            "show_debug_image": "False",
-            "input_image_topic": "/camera/rgb/image_raw"
+            "input_image_topic": "/camera/rgb/image_raw",
+            "namespace": "yolo"
         }.items()
     )
 
@@ -149,9 +139,8 @@ def generate_launch_description():
     ld.add_action(anchoring_node_cmd)
     ld.add_action(knowledge_base_node_cmd)
     ld.add_action(rviz_cmd)
-    ld.add_action(detection_visualizer_cmd)
 
-    ld.add_action(darknet_action_cmd)
+    ld.add_action(yolo_cmd)
     ld.add_action(asus_xtion_action_cmd)
 
     return ld

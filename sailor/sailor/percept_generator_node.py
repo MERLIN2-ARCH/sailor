@@ -24,8 +24,8 @@ from vision_msgs.msg import Detection2D
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 
-from sailor_interfaces.msg import Percept
-from sailor_interfaces.msg import PerceptArray
+from sailor_msgs.msg import Percept
+from sailor_msgs.msg import PerceptArray
 
 
 class PerceptGeneratorNode(Node):
@@ -41,19 +41,6 @@ class PerceptGeneratorNode(Node):
         self.declare_parameter("maximum_detection_threshold", 0.2)
         self.maximum_detection_threshold = self.get_parameter(
             "maximum_detection_threshold").get_parameter_value().double_value
-
-        self.declare_parameter("detection_score_threshold", 0.7)
-        self.detection_score_threshold = self.get_parameter(
-            "detection_score_threshold").get_parameter_value().double_value
-
-        self.declare_parameter("class_names", "")
-        class_names_files = self.get_parameter(
-            "class_names").get_parameter_value().string_value
-
-        self.classes = []
-        f = open(class_names_files, "r")
-        for line in f:
-            self.classes.append(line.strip())
 
         # aux
         self.anchors = {}
@@ -74,8 +61,7 @@ class PerceptGeneratorNode(Node):
             self, PointCloud2, "/camera/depth_registered/points",
             qos_profile=qos_profile_sensor_data)
         self.detections_sub = message_filters.Subscriber(
-            self, Detection2DArray, "/darknet/detections",
-            qos_profile=qos_profile_sensor_data)
+            self, Detection2DArray, "/yolo/detections")
 
         self._synchronizer = message_filters.ApproximateTimeSynchronizer(
             (self.image_sub, self.points_sub, self.detections_sub), 30, 0.5)
@@ -220,7 +206,6 @@ class PerceptGeneratorNode(Node):
         # create percept message
         msg = Percept()
 
-        msg.class_id = self.classes.index(max_class)
         msg.class_name = max_class
         msg.class_score = max_score
         msg.bounding_box = detection.bbox
@@ -269,9 +254,6 @@ class PerceptGeneratorNode(Node):
             if hypothesis.hypothesis.score > max_score:
                 max_score = hypothesis.hypothesis.score
                 max_class = hypothesis.hypothesis.class_id
-
-        if max_score < self.detection_score_threshold:
-            return None
 
         return [max_class, max_score]
 
