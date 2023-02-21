@@ -101,6 +101,16 @@ def generate_launch_description():
             "default.rviz")]
     )
 
+    detection_visualizer_cmd = Node(
+        package="detection_visualizer",
+        executable="detection_visualizer",
+        name="detection_visualizer",
+        namespace="darknet",
+        parameters=[{"class_names": os.path.join(
+            bringup_shared_dir, "config/darknet", "coco.names")}],
+        remappings=[("images", "/camera/rgb/image_raw")]
+    )
+
     #
     # LAUNCHES
     #
@@ -139,6 +149,7 @@ def generate_launch_description():
     ld.add_action(anchoring_node_cmd)
     ld.add_action(knowledge_base_node_cmd)
     ld.add_action(rviz_cmd)
+    ld.add_action(detection_visualizer_cmd)
 
     ld.add_action(darknet_action_cmd)
     ld.add_action(asus_xtion_action_cmd)

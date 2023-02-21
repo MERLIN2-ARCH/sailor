@@ -114,7 +114,6 @@ class AnchoringNode(Node):
 
         # compare new anchors
         matching_table = self.create_matching_table(new_anchors)
-
         row_ind, col_ind = hungarian_method(matching_table, True)
 
         for i in range(matching_table.shape[0]):
@@ -171,9 +170,9 @@ class AnchoringNode(Node):
 
         new_anchors = []
 
-        for ele in msg.percepts:
+        for percept in msg.percepts:
 
-            anchor = self.create_anchor(ele)
+            anchor = self.create_anchor(percept)
 
             anchor.timestamp = float(
                 msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9)
