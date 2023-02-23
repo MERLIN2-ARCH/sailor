@@ -116,9 +116,7 @@ class AnchoringNode(Node):
         matching_table = self.create_matching_table(new_anchors)
         row_ind, col_ind = hungarian_method(matching_table, True)
 
-        for i in range(matching_table.shape[0]):
-
-            new_anchor = new_anchors[i]
+        for i, new_anchor in enumerate(new_anchors):
 
             if i in row_ind:
 
