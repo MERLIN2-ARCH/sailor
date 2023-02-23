@@ -8,6 +8,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment as hungarian_method
 
 import rclpy
+from rclpy.qos import qos_profile_sensor_data
 from simple_node import Node
 
 from kant_dto import PddlObjectDto
@@ -60,9 +61,10 @@ class AnchoringNode(Node):
         self.sailor_net.eval()
 
         # subs and pubs
-        self.anchors_dbg = self.create_publisher(Image, "anchors_dbg", 10)
+        self.anchors_dbg = self.create_publisher(
+            Image, "anchors_dbg", qos_profile_sensor_data)
         self.percepts_sub = self.create_subscription(
-            PerceptArray, "percepts", self.percepts_cb, 10)
+            PerceptArray, "percepts", self.percepts_cb, qos_profile_sensor_data)
 
     def percepts_cb(self, msg: PerceptArray) -> None:
 
@@ -94,6 +96,33 @@ class AnchoringNode(Node):
         dbg_image = self.cv_bridge.cv2_to_imgmsg(
             cv_image, encoding=msg.original_image.encoding)
         self.anchors_dbg.publish(dbg_image)
+
+    # create new anchors from percepts
+    def create_new_anchors(self, msg: PerceptArray) -> List[Anchor]:
+
+        timestamp = float(
+            msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9)
+
+        return [self.create_anchor(percept, timestamp) for percept in msg.percepts]
+
+    def create_anchor(self, msg: Percept, timestamp: float) -> Anchor:
+
+        anchor = Anchor()
+
+        anchor.class_id = msg.class_id
+        anchor.class_name = msg.class_name
+        anchor.class_score = msg.class_score
+
+        anchor.bounding_box = msg.bounding_box
+        anchor.image = cv2.cvtColor(
+            self.cv_bridge.imgmsg_to_cv2(msg.image), cv2.COLOR_BGR2RGB)
+
+        anchor.position = [msg.position.x, msg.position.y, msg.position.z]
+        anchor.size = [msg.size.x, msg.size.y, msg.size.z]
+
+        anchor.timestamp = timestamp
+
+        return anchor
 
     def process_new_anchors(self, new_anchors: List[Anchor]) -> List[Anchor]:
         anchors_to_draw = []
@@ -139,7 +168,7 @@ class AnchoringNode(Node):
 
         return anchors_to_draw
 
-    def acquire(self, new_anchor: Anchor) -> None:
+    def acquire(self, new_anchor: Anchor) -> Anchor:
 
         self.get_logger().info("Acquire")
 
@@ -161,39 +190,6 @@ class AnchoringNode(Node):
         self.anchors.append(new_anchor)
 
         return new_anchor
-
-    # create new anchors from percepts
-    def create_new_anchors(self, msg: PerceptArray) -> List[Anchor]:
-
-        new_anchors = []
-
-        for percept in msg.percepts:
-
-            anchor = self.create_anchor(percept)
-
-            anchor.timestamp = float(
-                msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9)
-
-            new_anchors.append(anchor)
-
-        return new_anchors
-
-    def create_anchor(self, msg: Percept) -> Anchor:
-
-        anchor = Anchor()
-
-        anchor.class_id = msg.class_id
-        anchor.class_name = msg.class_name
-        anchor.class_score = msg.class_score
-
-        anchor.bounding_box = msg.bounding_box
-        anchor.image = cv2.cvtColor(
-            self.cv_bridge.imgmsg_to_cv2(msg.image), cv2.COLOR_BGR2RGB)
-
-        anchor.position = [msg.position.x, msg.position.y, msg.position.z]
-        anchor.size = [msg.size.x, msg.size.y, msg.size.z]
-
-        return anchor
 
     # matching function
     def is_same_class(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:

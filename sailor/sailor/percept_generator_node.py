@@ -49,9 +49,10 @@ class PerceptGeneratorNode(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # pubs
-        self.percepts_pub = self.create_publisher(PerceptArray, "percepts", 10)
+        self.percepts_pub = self.create_publisher(
+            PerceptArray, "percepts", qos_profile_sensor_data)
         self.percepts_markers_pub = self.create_publisher(
-            MarkerArray, "percepts_markers", 10)
+            MarkerArray, "percepts_markers", qos_profile_sensor_data)
 
         # subscribers
         self.image_sub = message_filters.Subscriber(
