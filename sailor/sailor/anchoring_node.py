@@ -2,7 +2,6 @@
 import cv2
 import math
 import cv_bridge
-from PIL import Image as PILImage
 from typing import List
 
 import numpy as np
@@ -203,13 +202,8 @@ class AnchoringNode(Node):
         ).to(self.torch_device)
 
     def transform_image(self, image: cv2.Mat) -> torch.Tensor:
-        transform = T.Compose(
-            [
-                T.Resize([224, 224]),
-                T.ToTensor()
-            ]
-        )
-        return transform(PILImage.fromarray(image)).to(self.torch_device)
+        res_image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
+        return T.ToTensor()(res_image).to(self.torch_device)
 
     def calculate_distance(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
         return torch.FloatTensor(
