@@ -32,7 +32,7 @@ class AnchoringNode(Node):
         super().__init__("anchoring_node")
 
         # anchoring
-        self.anchors: List[Anchor] = []
+        self.anchors = []
         self.cv_bridge = cv_bridge.CvBridge()
 
         # kant

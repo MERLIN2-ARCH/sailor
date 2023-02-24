@@ -110,8 +110,7 @@ def generate_launch_description():
             "model": "yolov8x.pt",
             "device": torch_device,
             "enable": "True",
-            "threshold": "0.5",
-            "nms_threshold": "0.50",
+            "threshold": "0.7",
             "input_image_topic": "/camera/rgb/image_raw",
             "namespace": "yolo"
         }.items()
