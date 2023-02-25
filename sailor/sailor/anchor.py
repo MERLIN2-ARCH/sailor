@@ -1,5 +1,5 @@
 
-import cv2
+import torch
 from typing import List
 from kant_dto import PddlObjectDto
 from vision_msgs.msg import BoundingBox2D
@@ -17,7 +17,7 @@ class Anchor:
         self._class_score = other._class_score
 
         self._bounding_box = other._bounding_box
-        self._image = other._image
+        self._image_tensor = other._image_tensor
 
         self._position = other._position
         self._size = other._size
@@ -65,12 +65,12 @@ class Anchor:
         self._bounding_box = bounding_box
 
     @property
-    def image(self) -> cv2.Mat:
-        return self._image
+    def image_tensor(self) -> torch.Tensor:
+        return self._image_tensor
 
-    @image.setter
-    def image(self, image: cv2.Mat) -> None:
-        self._image = image
+    @image_tensor.setter
+    def image_tensor(self, image_tensor: torch.Tensor) -> None:
+        self._image_tensor = image_tensor
 
     @property
     def position(self) -> List[float]:

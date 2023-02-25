@@ -65,7 +65,9 @@ def generate_launch_description():
         name="percept_generator_node",
         output="screen",
         parameters=[{"target_frame": "base_link",
-                     "detection_score_threshold": 0.5}]
+                     "detection_score_threshold": 0.5,
+                     "torch_device": torch_device
+                     }]
     )
 
     anchoring_node_cmd = Node(

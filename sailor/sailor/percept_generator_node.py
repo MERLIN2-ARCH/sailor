@@ -4,6 +4,11 @@ import numpy as np
 from typing import List
 from typing import Union
 
+import torch
+import torch.nn as nn
+import torchvision.transforms as T
+from torchvision.models import resnet18 as resnet
+
 import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
@@ -42,6 +47,18 @@ class PerceptGeneratorNode(Node):
         self.maximum_detection_threshold = self.get_parameter(
             "maximum_detection_threshold").get_parameter_value().double_value
 
+        self.declare_parameter("torch_device", "cuda:0")
+        torch_device = self.get_parameter(
+            "torch_device").get_parameter_value().string_value
+        self.torch_device = torch.device(
+            torch_device if torch.cuda.is_available() else "cpu")
+
+        # resnet
+        resnet_l = resnet(pretrained=True)
+        self.resnet = nn.Sequential(*(list(resnet_l.children())[:-1]))
+        self.resnet.to(self.torch_device)
+        self.resnet.eval()
+
         # aux
         self.anchors = {}
         self.cv_bridge = cv_bridge.CvBridge()
@@ -79,7 +96,6 @@ class PerceptGeneratorNode(Node):
 
         # convert image
         cv_image = self.cv_bridge.imgmsg_to_cv2(image_msg)
-        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         # convert pointcloud
         points = np.frombuffer(points_msg.data, dtype=np.float32).reshape(
@@ -198,7 +214,7 @@ class PerceptGeneratorNode(Node):
             return None
 
         cropped_image = self.crop_image(cv_image, detection)
-        if cropped_image is None or len(cropped_image.data) == 0:
+        if cropped_image is None:
             return None
 
         max_class, max_score = class_data
@@ -218,7 +234,7 @@ class PerceptGeneratorNode(Node):
         msg.size.y = size[1]
         msg.size.z = size[2]
 
-        msg.image = cropped_image
+        msg.image_tensor = cropped_image
 
         return msg
 
@@ -327,7 +343,7 @@ class PerceptGeneratorNode(Node):
     def crop_image(self,
                    cv_image: cv2.Mat,
                    detection: Detection2D
-                   ) -> Image:
+                   ) -> List[float]:
 
         bb_min_x = int(detection.bbox.center.x - detection.bbox.size_x / 2.0)
         bb_min_y = int(detection.bbox.center.y - detection.bbox.size_y / 2.0)
@@ -336,10 +352,16 @@ class PerceptGeneratorNode(Node):
 
         cropped_image = cv_image[bb_min_y:bb_max_y, bb_min_x:bb_max_x]
 
-        try:
-            return self.cv_bridge.cv2_to_imgmsg(cropped_image)
-        except ZeroDivisionError:
+        if cropped_image.shape[0] > 0 and cropped_image.shape[1] > 0:
+            with torch.no_grad():
+                return self.convert_img_to_tensor(cropped_image)
+        else:
             return None
+
+    def convert_img_to_tensor(self, image: cv2.Mat) -> List[float]:
+        image = T.ToTensor()(image).unsqueeze(0).to(self.torch_device)
+        tensor = self.resnet(image)
+        return tensor.reshape(1, -1).cpu().numpy().tolist()[0]
 
 
 def main():

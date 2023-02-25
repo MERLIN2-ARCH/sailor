@@ -1,6 +1,7 @@
 
 import cv2
 import math
+import torch
 import cv_bridge
 from typing import List
 
@@ -17,9 +18,6 @@ from kant_dao import ParameterLoader
 
 from sailor.anchor import Anchor
 from sailor.sailor_net import SailorNet
-
-import torch
-import torchvision.transforms as T
 
 from sailor_msgs.msg import Percept
 from sailor_msgs.msg import PerceptArray
@@ -55,7 +53,7 @@ class AnchoringNode(Node):
             torch_device if torch.cuda.is_available() else "cpu")
 
         # matching function
-        self.sailor_net = SailorNet()
+        self.sailor_net = SailorNet(False)
         self.sailor_net.to(self.torch_device)
         self.sailor_net.load_state_dict(torch.load(weights_path))
         self.sailor_net.eval()
@@ -114,8 +112,8 @@ class AnchoringNode(Node):
         anchor.class_score = msg.class_score
 
         anchor.bounding_box = msg.bounding_box
-        anchor.image = cv2.cvtColor(
-            self.cv_bridge.imgmsg_to_cv2(msg.image), cv2.COLOR_BGR2RGB)
+        anchor.image_tensor = torch.from_numpy(
+            np.array(msg.image_tensor)).unsqueeze(0).to(self.torch_device)
 
         anchor.position = [msg.position.x, msg.position.y, msg.position.z]
         anchor.size = [msg.size.x, msg.size.y, msg.size.z]
@@ -197,10 +195,6 @@ class AnchoringNode(Node):
             [float(new_anchor.class_id == anchor.class_id)]
         ).to(self.torch_device)
 
-    def transform_image(self, image: cv2.Mat) -> torch.Tensor:
-        res_image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
-        return T.ToTensor()(res_image).to(self.torch_device)
-
     def calculate_distance(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
         return torch.FloatTensor(
             [math.sqrt(
@@ -212,16 +206,15 @@ class AnchoringNode(Node):
         ).to(self.torch_device)
 
     def calculate_scale_factor(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
-        vol_1 = new_anchor.size[0] * \
-            new_anchor.size[1] * \
-            new_anchor.size[2]
-        vol_2 = anchor.size[0] *\
-            anchor.size[1] *\
-            anchor.size[2]
-
-        scale_factor = vol_2 / vol_1
-        if vol_1 > vol_2:
-            scale_factor = vol_1 / vol_2
+        scale_factor = (
+            min(new_anchor.size[0], anchor.size[0]) +
+            min(new_anchor.size[1], anchor.size[1]) +
+            min(new_anchor.size[2], anchor.size[2])
+        ) / (
+            max(new_anchor.size[0], anchor.size[0]) +
+            max(new_anchor.size[1], anchor.size[1]) +
+            max(new_anchor.size[2], anchor.size[2])
+        )
 
         return torch.FloatTensor([scale_factor]).to(self.torch_device)
 
@@ -234,8 +227,8 @@ class AnchoringNode(Node):
         # compute the pair percept-anchor features
         data = {
             "same_class": self.is_same_class(new_anchor, anchor).unsqueeze(0),
-            "img_1": self.transform_image(new_anchor.image).unsqueeze(0),
-            "img_2": self.transform_image(anchor.image).unsqueeze(0),
+            "tensor_1": new_anchor.image_tensor,
+            "tensor_2": anchor.image_tensor,
             "distance": self.calculate_distance(new_anchor, anchor).unsqueeze(0),
             "scale_factor": self.calculate_scale_factor(new_anchor, anchor).unsqueeze(0),
             "time": self.time_difference(new_anchor, anchor).unsqueeze(0)

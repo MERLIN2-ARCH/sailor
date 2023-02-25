@@ -10,4 +10,4 @@ geometry_msgs/Vector3 position
 geometry_msgs/Vector3 size
 
 # visual features
-sensor_msgs/Image image
+float32[] image_tensor
