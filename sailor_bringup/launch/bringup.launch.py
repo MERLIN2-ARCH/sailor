@@ -40,7 +40,7 @@ def generate_launch_description():
     weights_path_cmd = DeclareLaunchArgument(
         "weights_path",
         default_value=os.path.join(
-            bringup_shared_dir, "weights/mix/dl_model.pth"
+            bringup_shared_dir, "weights/mix/dl_model.pt"
         ),
         description="Path to the weights")
 

@@ -359,6 +359,7 @@ class PerceptGeneratorNode(Node):
             return None
 
     def convert_img_to_tensor(self, image: cv2.Mat) -> List[float]:
+        image = cv2.resize(image, (224, 224), cv2.INTER_AREA)
         image = T.ToTensor()(image).unsqueeze(0).to(self.torch_device)
         tensor = self.resnet(image)
         return tensor.reshape(1, -1).cpu().numpy().tolist()[0]
