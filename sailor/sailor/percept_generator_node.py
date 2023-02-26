@@ -161,7 +161,7 @@ class PerceptGeneratorNode(Node):
                 # create marker
                 marker = Marker()
                 marker.header.frame_id = self.target_frame
-                marker.header.stamp = self.get_clock().now().to_msg()
+                marker.header.stamp = points_msg.header.stamp
 
                 marker.ns = "sailor"
                 marker.id = len(marker_array.markers)
@@ -192,7 +192,7 @@ class PerceptGeneratorNode(Node):
                 marker_array.markers.append(marker)
 
         percepts_array.header.frame_id = self.target_frame
-        percepts_array.header.stamp = self.get_clock().now().to_msg()
+        percepts_array.header.stamp = points_msg.header.stamp
         percepts_array.original_image = image_msg
 
         self.percepts_pub.publish(percepts_array)
