@@ -1,8 +1,7 @@
 
 import cv2
 import numpy as np
-from typing import List
-from typing import Union
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
@@ -14,23 +13,22 @@ from rclpy.node import Node
 from rclpy.duration import Duration
 from rclpy.qos import qos_profile_sensor_data
 
+import cv_bridge
+import message_filters
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
-
-import cv_bridge
-import message_filters
 
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import PointCloud2
 from vision_msgs.msg import Detection2DArray
 from vision_msgs.msg import Detection2D
-
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
-
 from sailor_msgs.msg import Percept
 from sailor_msgs.msg import PerceptArray
+
+from sailor.thread_with_return_value import ThreadWithReturnValue
 
 
 class PerceptGeneratorNode(Node):
@@ -91,8 +89,9 @@ class PerceptGeneratorNode(Node):
                       detections_msg: Detection2DArray,
                       ) -> None:
 
-        percepts_array = PerceptArray()
-        marker_array = MarkerArray()
+        # check if there are detections
+        if not detections_msg.detections:
+            return
 
         # convert image
         cv_image = self.cv_bridge.imgmsg_to_cv2(image_msg)
@@ -101,120 +100,167 @@ class PerceptGeneratorNode(Node):
         points = np.frombuffer(points_msg.data, dtype=np.float32).reshape(
             points_msg.height, points_msg.width, -1)
 
-        # transform position to target_frame
-        transform = None
+        # transform position from pointcloud frame to target_frame
+        rotation = None
+        translation = None
+
         try:
-            now = rclpy.time.Time()
             transform = self.tf_buffer.lookup_transform(
                 self.target_frame,
                 points_msg.header.frame_id,
-                now)
+                rclpy.time.Time())
+
+            rotation = np.array([transform.transform.rotation.w,
+                                 transform.transform.rotation.x,
+                                 transform.transform.rotation.y,
+                                 transform.transform.rotation.z])
+
+            translation = np.array([transform.transform.translation.x,
+                                    transform.transform.translation.y,
+                                    transform.transform.translation.z])
 
         except TransformException as ex:
-            self.get_logger().error(
-                f'Could not transform: {ex}')
+            self.get_logger().error(f"Could not transform: {ex}")
             return None
 
-        # loop detections
-        for detection in detections_msg.detections:
+        # create create_percepts
+        create_percept_v = np.vectorize(
+            self.create_percept, excluded=["cv_image", "points",
+                                           "rotation", "translation"])
+        percepts = create_percept_v(
+            cv_image=cv_image, points=points,
+            detection=detections_msg.detections,
+            rotation=rotation, translation=translation)
 
-            # create a percept extracting its features
-            new_percept = self.create_percept(
-                cv_image, points, detection)
+        # remove Nones
+        percepts = percepts[percepts != None]
 
-            if not new_percept is None:
+        # create msg
+        percepts_array = PerceptArray()
 
-                # rotate ans tranlate position and size
-                position = self.qv_mult([transform.transform.rotation.w,
-                                         transform.transform.rotation.x,
-                                         transform.transform.rotation.y,
-                                         transform.transform.rotation.z],
-                                        [new_percept.position.x,
-                                         new_percept.position.y,
-                                         new_percept.position.z])
-
-                size = self.qv_mult([transform.transform.rotation.w,
-                                     transform.transform.rotation.x,
-                                     transform.transform.rotation.y,
-                                     transform.transform.rotation.z],
-                                    [new_percept.size.x,
-                                     new_percept.size.y,
-                                     new_percept.size.z])
-
-                size[0] = abs(size[0])
-                size[1] = abs(size[1])
-                size[2] = abs(size[2])
-
-                new_percept.position.x = position[0] + \
-                    transform.transform.translation.x
-                new_percept.position.y = position[1] + \
-                    transform.transform.translation.y
-                new_percept.position.z = position[2] + \
-                    transform.transform.translation.z
-
-                new_percept.size.x = size[0]
-                new_percept.size.y = size[1]
-                new_percept.size.z = size[2]
-
-                percepts_array.percepts.append(new_percept)
-
-                # create marker
-                marker = Marker()
-                marker.header.frame_id = self.target_frame
-                marker.header.stamp = points_msg.header.stamp
-
-                marker.ns = "sailor"
-                marker.id = len(marker_array.markers)
-                marker.type = Marker.CUBE
-                marker.action = Marker.ADD
-                marker.frame_locked = False
-
-                marker.pose.position.x = new_percept.position.x
-                marker.pose.position.y = new_percept.position.y
-                marker.pose.position.z = new_percept.position.z
-
-                marker.pose.orientation.x = 0.0
-                marker.pose.orientation.y = 0.0
-                marker.pose.orientation.z = 0.0
-                marker.pose.orientation.w = 1.0
-                marker.scale.x = new_percept.size.x
-                marker.scale.y = new_percept.size.y
-                marker.scale.z = new_percept.size.z
-
-                marker.color.b = 0.0
-                marker.color.g = new_percept.class_score * 255.0
-                marker.color.r = (1.0 - new_percept.class_score) * 255.0
-                marker.color.a = 0.4
-
-                marker.lifetime = Duration(seconds=1.0).to_msg()
-                marker.text = new_percept.class_name
-
-                marker_array.markers.append(marker)
+        if percepts.size > 0:
+            percepts_array.percepts = percepts.tolist()
 
         percepts_array.header.frame_id = self.target_frame
         percepts_array.header.stamp = points_msg.header.stamp
         percepts_array.original_image = image_msg
 
+        # create markers
+        marker_array = MarkerArray()
+
+        for p in percepts:
+            marker = self.create_marker(p)
+            marker.header.stamp = points_msg.header.stamp
+            marker.id = len(marker_array.markers)
+            marker_array.markers.append(marker)
+
+        # publish
         self.percepts_pub.publish(percepts_array)
         self.percepts_markers_pub.publish(marker_array)
+
+    def create_marker(self,
+                      percept: Percept
+                      ) -> Marker:
+
+        marker = Marker()
+        marker.header.frame_id = self.target_frame
+
+        marker.ns = "sailor"
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+        marker.frame_locked = False
+
+        marker.pose.position.x = percept.position.x
+        marker.pose.position.y = percept.position.y
+        marker.pose.position.z = percept.position.z
+
+        marker.pose.orientation.x = 0.0
+        marker.pose.orientation.y = 0.0
+        marker.pose.orientation.z = 0.0
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = percept.size.x
+        marker.scale.y = percept.size.y
+        marker.scale.z = percept.size.z
+
+        marker.color.b = 0.0
+        marker.color.g = percept.class_score * 255.0
+        marker.color.r = (1.0 - percept.class_score) * 255.0
+        marker.color.a = 0.4
+
+        marker.lifetime = Duration(seconds=1.0).to_msg()
+        marker.text = percept.class_name
+
+        return marker
+
+    def transform_percept(self,
+                          percept: Percept,
+                          rotation: np.ndarray,
+                          translation: np.ndarray
+                          ) -> None:
+
+        # position
+        position = self.qv_mult(
+            rotation,
+            np.array([percept.position.x,
+                      percept.position.y,
+                      percept.position.z])
+        ) + translation
+
+        percept.position.x = position[0]
+        percept.position.y = position[1]
+        percept.position.z = position[2]
+
+        # size
+        size = self.qv_mult(
+            rotation,
+            np.array([percept.size.x,
+                      percept.size.y,
+                      percept.size.z])
+        )
+
+        percept.size.x = abs(size[0])
+        percept.size.y = abs(size[1])
+        percept.size.z = abs(size[2])
+
+    @staticmethod
+    def qv_mult(q: np.ndarray, v: np.ndarray) -> np.ndarray:
+        q = np.array(q, dtype=np.float64)
+        v = np.array(v, dtype=np.float64)
+        qvec = q[1:]
+        uv = np.cross(qvec, v)
+        uuv = np.cross(qvec, uv)
+        return v + 2 * (uv * q[0] + uuv)
 
     def create_percept(self,
                        cv_image: cv2.Mat,
                        points: np.ndarray,
-                       detection: Detection2D
+                       detection: Detection2D,
+                       rotation: np.ndarray,
+                       translation: np.ndarray
                        ) -> Percept:
 
-        # extract features
-        class_data = self.get_class_data(detection)
-        if not class_data:
-            return None
+        # create threads to extract features
+        class_data_t = ThreadWithReturnValue(
+            target=self.get_class_data, args=(detection,))
+        physical_features_t = ThreadWithReturnValue(
+            target=self.get_physical_features, args=(points, detection,))
+        cropped_image_t = ThreadWithReturnValue(
+            target=self.crop_image, args=(cv_image, detection,))
 
-        physical_features = self.get_physical_features(points, detection)
-        if not physical_features:
-            return None
+        class_data_t.start()
+        physical_features_t.start()
+        cropped_image_t.start()
 
-        cropped_image = self.crop_image(cv_image, detection)
-        if cropped_image is None:
+        # wait for the results
+        class_data = class_data_t.join()
+        physical_features = physical_features_t.join()
+        cropped_image = cropped_image_t.join()
+
+        if (
+            not class_data or
+            not physical_features or
+            cropped_image is None
+        ):
             return None
 
         max_class, max_score = class_data
@@ -234,50 +280,27 @@ class PerceptGeneratorNode(Node):
         msg.size.y = size[1]
         msg.size.z = size[2]
 
+        self.transform_percept(msg, rotation, translation)
+
         msg.image_tensor = cropped_image
 
         return msg
-
-    @staticmethod
-    def qv_mult(q1: List[float], v1: List[float]) -> List[float]:
-
-        def q_mult(q1: List[float], q2: List[float]) -> List[float]:
-            w1, x1, y1, z1 = q1
-            w2, x2, y2, z2 = q2
-            w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
-            x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
-            y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
-            z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
-            return [w, x, y, z]
-
-        def q_conjugate(q: List[float]) -> List[float]:
-            w, x, y, z = q
-            return [w, -x, -y, -z]
-
-        q2 = [0.0, ] + v1
-        return q_mult(q_mult(q1, q2), q_conjugate(q1))[1:]
 
     ###############################
     # methods to extract features #
     ###############################
     def get_class_data(self,
                        detection: Detection2D
-                       ) -> List[Union[str, float]]:
+                       ) -> Tuple[str, float]:
 
-        max_class = None
-        max_score = 0.0
-
-        for hypothesis in detection.results:
-            if hypothesis.hypothesis.score > max_score:
-                max_score = hypothesis.hypothesis.score
-                max_class = hypothesis.hypothesis.class_id  # class name
-
-        return [max_class, max_score]
+        max_hypothesis = max(
+            detection.results, key=lambda h: h.hypothesis.score)
+        return max_hypothesis.hypothesis.class_id, max_hypothesis.hypothesis.score
 
     def get_physical_features(self,
                               points: np.ndarray,
                               detection: Detection2D
-                              ) -> List[List[float]]:
+                              ) -> Tuple[Tuple[float]]:
 
         center_x = detection.bbox.center.x
         center_y = detection.bbox.center.y
@@ -328,17 +351,18 @@ class PerceptGeneratorNode(Node):
         min_z = np.min(
             points_masked[valid_indices[:, 0], valid_indices[:, 1], 2])
 
-        position = [
+        position = (
             float((max_x + min_x) / 2),
             float((max_y + min_y) / 2),
             float((max_z + min_z) / 2)
-        ]
-        size = [
+        )
+        size = (
             float(max_x - min_x),
             float(max_y - min_y),
-            float(max_z - min_z)]
+            float(max_z - min_z)
+        )
 
-        return [position, size]
+        return position, size
 
     def crop_image(self,
                    cv_image: cv2.Mat,
@@ -353,16 +377,16 @@ class PerceptGeneratorNode(Node):
         cropped_image = cv_image[bb_min_y:bb_max_y, bb_min_x:bb_max_x]
 
         if cropped_image.shape[0] > 0 and cropped_image.shape[1] > 0:
-            with torch.no_grad():
-                return self.convert_img_to_tensor(cropped_image)
+            return self.convert_img_to_tensor(cropped_image)
         else:
             return None
 
     def convert_img_to_tensor(self, image: cv2.Mat) -> List[float]:
-        image = cv2.resize(image, (224, 224), cv2.INTER_AREA)
-        image = T.ToTensor()(image).unsqueeze(0).to(self.torch_device)
-        tensor = self.resnet(image)
-        return tensor.reshape(1, -1).cpu().numpy().tolist()[0]
+        with torch.no_grad():
+            image = cv2.resize(image, (224, 224), cv2.INTER_AREA)
+            image = T.ToTensor()(image).unsqueeze(0).to(self.torch_device)
+            tensor = self.resnet(image)
+            return tensor.reshape(1, -1).cpu().numpy().tolist()[0]
 
 
 def main():
