@@ -270,7 +270,7 @@ class PerceptGeneratorNode(Node):
         for hypothesis in detection.results:
             if hypothesis.hypothesis.score > max_score:
                 max_score = hypothesis.hypothesis.score
-                max_class = hypothesis.hypothesis.class_id
+                max_class = hypothesis.hypothesis.class_id  # class name
 
         return [max_class, max_score]
 

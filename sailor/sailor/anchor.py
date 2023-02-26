@@ -12,7 +12,6 @@ class Anchor:
 
     def update(self, other: "Anchor") -> None:
 
-        self._class_id = other._class_id
         self._class_name = other._class_name
         self._class_score = other._class_score
 
@@ -31,14 +30,6 @@ class Anchor:
     @symbol.setter
     def symbol(self, symbol: PddlObjectDto) -> None:
         self._symbol = symbol
-
-    @property
-    def class_id(self) -> int:
-        return self._class_id
-
-    @class_id.setter
-    def class_id(self, class_id: int) -> None:
-        self._class_id = class_id
 
     @property
     def class_name(self) -> str:

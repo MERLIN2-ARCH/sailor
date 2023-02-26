@@ -107,7 +107,6 @@ class AnchoringNode(Node):
 
         anchor = Anchor()
 
-        anchor.class_id = msg.class_id
         anchor.class_name = msg.class_name
         anchor.class_score = msg.class_score
 
@@ -192,7 +191,7 @@ class AnchoringNode(Node):
     # matching function
     def is_same_class(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
         return torch.FloatTensor(
-            [float(new_anchor.class_id == anchor.class_id)]
+            [float(new_anchor.class_name == anchor.class_name)]
         ).to(self.torch_device)
 
     def calculate_distance(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
