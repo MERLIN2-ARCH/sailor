@@ -80,26 +80,10 @@ class PerceptGeneratorNode(Node):
             self, Detection2DArray, "/yolo/detections")
 
         self._synchronizer = message_filters.ApproximateTimeSynchronizer(
-            (self.image_sub, self.points_sub, self.detections_sub), 30, 0.5)
+            (self.image_sub, self.points_sub, self.detections_sub), 5, 0.5)
         self._synchronizer.registerCallback(self.on_detections)
 
-    def on_detections(self,
-                      image_msg: Image,
-                      points_msg: PointCloud2,
-                      detections_msg: Detection2DArray,
-                      ) -> None:
-
-        # check if there are detections
-        if not detections_msg.detections:
-            return
-
-        # convert image
-        cv_image = self.cv_bridge.imgmsg_to_cv2(image_msg)
-
-        # convert pointcloud
-        points = np.frombuffer(points_msg.data, dtype=np.float32).reshape(
-            points_msg.height, points_msg.width, -1)
-
+    def transform(self, frame_id: str) -> Tuple[np.ndarray]:
         # transform position from pointcloud frame to target_frame
         rotation = None
         translation = None
@@ -107,7 +91,7 @@ class PerceptGeneratorNode(Node):
         try:
             transform = self.tf_buffer.lookup_transform(
                 self.target_frame,
-                points_msg.header.frame_id,
+                frame_id,
                 rclpy.time.Time())
 
             rotation = np.array([transform.transform.rotation.w,
@@ -119,9 +103,42 @@ class PerceptGeneratorNode(Node):
                                     transform.transform.translation.y,
                                     transform.transform.translation.z])
 
+            return rotation, translation
+
         except TransformException as ex:
             self.get_logger().error(f"Could not transform: {ex}")
             return None
+
+    def on_detections(self,
+                      image_msg: Image,
+                      points_msg: PointCloud2,
+                      detections_msg: Detection2DArray,
+                      ) -> None:
+
+        # check if there are detections
+        if not detections_msg.detections:
+            return
+
+        # create threads
+        cv_image_t = ThreadWithReturnValue(
+            target=self.cv_bridge.imgmsg_to_cv2, args=(image_msg,))
+        points_t = ThreadWithReturnValue(
+            target=np.frombuffer, args=(points_msg.data, np.float32,))
+        transform_t = ThreadWithReturnValue(
+            target=self.transform, args=(points_msg.header.frame_id,))
+
+        cv_image_t.start()
+        points_t.start()
+        transform_t.start()
+
+        # wait for the results
+        cv_image = cv_image_t.join()
+        points = points_t.join().reshape(points_msg.height, points_msg.width, -1)
+        transform = transform_t.join()
+
+        if transform is None:
+            return None
+        rotation, translation = transform
 
         # create create_percepts
         create_percept_v = np.vectorize(
@@ -192,45 +209,6 @@ class PerceptGeneratorNode(Node):
 
         return marker
 
-    def transform_percept(self,
-                          percept: Percept,
-                          rotation: np.ndarray,
-                          translation: np.ndarray
-                          ) -> None:
-
-        # position
-        position = self.qv_mult(
-            rotation,
-            np.array([percept.position.x,
-                      percept.position.y,
-                      percept.position.z])
-        ) + translation
-
-        percept.position.x = position[0]
-        percept.position.y = position[1]
-        percept.position.z = position[2]
-
-        # size
-        size = self.qv_mult(
-            rotation,
-            np.array([percept.size.x,
-                      percept.size.y,
-                      percept.size.z])
-        )
-
-        percept.size.x = abs(size[0])
-        percept.size.y = abs(size[1])
-        percept.size.z = abs(size[2])
-
-    @staticmethod
-    def qv_mult(q: np.ndarray, v: np.ndarray) -> np.ndarray:
-        q = np.array(q, dtype=np.float64)
-        v = np.array(v, dtype=np.float64)
-        qvec = q[1:]
-        uv = np.cross(qvec, v)
-        uuv = np.cross(qvec, uv)
-        return v + 2 * (uv * q[0] + uuv)
-
     def create_percept(self,
                        cv_image: cv2.Mat,
                        points: np.ndarray,
@@ -285,6 +263,45 @@ class PerceptGeneratorNode(Node):
         msg.image_tensor = cropped_image
 
         return msg
+
+    def transform_percept(self,
+                          percept: Percept,
+                          rotation: np.ndarray,
+                          translation: np.ndarray
+                          ) -> None:
+
+        # position
+        position = self.qv_mult(
+            rotation,
+            np.array([percept.position.x,
+                      percept.position.y,
+                      percept.position.z])
+        ) + translation
+
+        percept.position.x = position[0]
+        percept.position.y = position[1]
+        percept.position.z = position[2]
+
+        # size
+        size = self.qv_mult(
+            rotation,
+            np.array([percept.size.x,
+                      percept.size.y,
+                      percept.size.z])
+        )
+
+        percept.size.x = abs(size[0])
+        percept.size.y = abs(size[1])
+        percept.size.z = abs(size[2])
+
+    @staticmethod
+    def qv_mult(q: np.ndarray, v: np.ndarray) -> np.ndarray:
+        q = np.array(q, dtype=np.float64)
+        v = np.array(v, dtype=np.float64)
+        qvec = q[1:]
+        uv = np.cross(qvec, v)
+        uuv = np.cross(qvec, uv)
+        return v + 2 * (uv * q[0] + uuv)
 
     ###############################
     # methods to extract features #

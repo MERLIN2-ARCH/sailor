@@ -109,7 +109,7 @@ def generate_launch_description():
             os.path.join(yolo_shared_dir, "launch",
                          "yolov8.launch.py")),
         launch_arguments={
-            "model": "yolov8x.pt",
+            "model": "yolov8m.pt",
             "device": torch_device,
             "enable": "True",
             "threshold": "0.7",
