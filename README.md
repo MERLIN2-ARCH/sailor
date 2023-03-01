@@ -36,7 +36,7 @@ $ sudo apt-get install -y mongodb-org
 $ sudo systemctl start mongod
 
 # SAILOR dependencies
-$ pip3 install -r sailor/requirements.txt
+$ pip3 install -r requirements.txt
 
 # rosdep
 $ cd ~/ros2_ws
