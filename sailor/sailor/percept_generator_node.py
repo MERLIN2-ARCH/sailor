@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as T
 from torchvision.models import resnet18 as resnet
+from torchvision.models import ResNet18_Weights as weights
 
 import rclpy
 from rclpy.node import Node
@@ -52,7 +53,11 @@ class PerceptGeneratorNode(Node):
             torch_device if torch.cuda.is_available() else "cpu")
 
         # resnet
-        resnet_l = resnet(pretrained=True)
+        resnet_l = resnet(weights=weights.DEFAULT)
+        self.resnet_transform = T.Compose([
+            T.ToTensor(),
+            weights.DEFAULT.transforms()
+        ])
         self.resnet = nn.Sequential(*(list(resnet_l.children())[:-1]))
         self.resnet.to(self.torch_device)
         self.resnet.eval()
@@ -400,8 +405,8 @@ class PerceptGeneratorNode(Node):
 
     def convert_img_to_tensor(self, image: cv2.Mat) -> List[float]:
         with torch.no_grad():
-            image = cv2.resize(image, (224, 224), cv2.INTER_AREA)
-            image = T.ToTensor()(image).unsqueeze(0).to(self.torch_device)
+            image = self.resnet_transform(
+                image).unsqueeze(0).to(self.torch_device)
             tensor = self.resnet(image)
             return tensor.reshape(1, -1).cpu().numpy().tolist()[0]
 
