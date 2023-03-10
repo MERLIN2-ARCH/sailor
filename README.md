@@ -50,7 +50,7 @@ $ colcon build
 ## Usage
 
 ```shell
-$ ros2 launch sailor_bringup bringup.launch.py
+$ ros2 launch sailor_bringup sailor.launch.py
 ```
 
 ```shell

@@ -1,0 +1,10 @@
+Confusion matrix:
+TN: 80018
+FP: 88
+FN: 138
+TP: 36411
+
+Accuracy: 0.998062663409198
+Precision Score: 0.9975889750404121
+Recall Score: 0.99622424690142
+F1 Score: 0.9969061439053774
