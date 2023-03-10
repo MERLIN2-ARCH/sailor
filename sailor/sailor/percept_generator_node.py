@@ -324,8 +324,8 @@ class PerceptGeneratorNode(Node):
                               detection: Detection2D
                               ) -> Tuple[Tuple[float]]:
 
-        center_x = detection.bbox.center.x
-        center_y = detection.bbox.center.y
+        center_x = detection.bbox.center.position.x
+        center_y = detection.bbox.center.position.y
         size_x = detection.bbox.size_x
         size_y = detection.bbox.size_y
 
@@ -391,10 +391,10 @@ class PerceptGeneratorNode(Node):
                    detection: Detection2D
                    ) -> List[float]:
 
-        bb_min_x = int(detection.bbox.center.x - detection.bbox.size_x / 2.0)
-        bb_min_y = int(detection.bbox.center.y - detection.bbox.size_y / 2.0)
-        bb_max_x = int(detection.bbox.center.x + detection.bbox.size_x / 2.0)
-        bb_max_y = int(detection.bbox.center.y + detection.bbox.size_y / 2.0)
+        bb_min_x = int(detection.bbox.center.position.x - detection.bbox.size_x / 2.0)
+        bb_min_y = int(detection.bbox.center.position.y - detection.bbox.size_y / 2.0)
+        bb_max_x = int(detection.bbox.center.position.x + detection.bbox.size_x / 2.0)
+        bb_max_y = int(detection.bbox.center.position.y + detection.bbox.size_y / 2.0)
 
         cropped_image = cv_image[bb_min_y:bb_max_y, bb_min_x:bb_max_x]
 

@@ -74,8 +74,8 @@ class AnchoringNode(Node):
 
         for anchor in anchors_to_draw:
 
-            cx = anchor.bounding_box.center.x
-            cy = anchor.bounding_box.center.y
+            cx = anchor.bounding_box.center.position.x
+            cy = anchor.bounding_box.center.position.y
             sx = anchor.bounding_box.size_x
             sy = anchor.bounding_box.size_y
 
