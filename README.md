@@ -20,7 +20,7 @@
 # repos
 $ cd ~/ros2_ws/src
 $ git clone https://github.com/MERLIN2-ARCH/sailor
-$ pip3 install -r requirements.txt
+$ pip3 install -r sailor/requirements.txt
 $ cd ~/ros2_ws
 $ colcon build
 ```
