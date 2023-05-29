@@ -109,6 +109,7 @@ class AnchoringNode(Node):
 
         anchor.class_name = msg.class_name
         anchor.class_score = msg.class_score
+        anchor.track_id = msg.track_id
 
         anchor.bounding_box = msg.bounding_box
         anchor.image_tensor = torch.from_numpy(
@@ -223,6 +224,10 @@ class AnchoringNode(Node):
         ).to(self.torch_device)
 
     def matching_function(self, new_anchor: Anchor, anchor: Anchor) -> float:
+
+        if new_anchor.track_id == anchor.track_id:
+            return 2.0
+
         # compute the pair percept-anchor features
         data = {
             "same_class": self.is_same_class(new_anchor, anchor).unsqueeze(0),

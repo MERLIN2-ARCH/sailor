@@ -255,6 +255,7 @@ class PerceptGeneratorNode(Node):
         msg.class_name = max_class
         msg.class_score = max_score
         msg.bounding_box = detection.bbox
+        msg.track_id = detection.id
 
         msg.position.x = position[0]
         msg.position.y = position[1]

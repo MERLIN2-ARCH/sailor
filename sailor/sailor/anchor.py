@@ -14,6 +14,7 @@ class Anchor:
 
         self._class_name = other._class_name
         self._class_score = other._class_score
+        self._track_id = other._track_id
 
         self._bounding_box = other._bounding_box
         self._image_tensor = other._image_tensor
@@ -54,6 +55,14 @@ class Anchor:
     @bounding_box.setter
     def bounding_box(self, bounding_box: BoundingBox2D) -> None:
         self._bounding_box = bounding_box
+
+    @property
+    def track_id(self) -> str:
+        return self._track_id
+
+    @track_id.setter
+    def track_id(self, track_id: str) -> None:
+        self._track_id = track_id
 
     @property
     def image_tensor(self) -> torch.Tensor:
