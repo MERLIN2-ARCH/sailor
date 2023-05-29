@@ -338,10 +338,14 @@ class PerceptGeneratorNode(Node):
         center_point = points[int(center_y)][int(center_x)]
 
         # masks for limiting the pc using bounding box
-        mask_y = np.logical_and(bb_min_y <= np.arange(
-            points.shape[0]), np.arange(points.shape[0]) < bb_max_y)
-        mask_x = np.logical_and(bb_min_x <= np.arange(
-            points.shape[1]), np.arange(points.shape[1]) < bb_max_x)
+        mask_y = np.logical_and(
+            bb_min_y <= np.arange(points.shape[0]),
+            bb_max_y >= np.arange(points.shape[0])
+        )
+        mask_x = np.logical_and(
+            bb_min_x <= np.arange(points.shape[1]),
+            bb_max_x >= np.arange(points.shape[1])
+        )
 
         mask = np.ix_(mask_y, mask_x)
         points_masked = points[mask]
@@ -392,10 +396,14 @@ class PerceptGeneratorNode(Node):
                    detection: Detection2D
                    ) -> List[float]:
 
-        bb_min_x = int(detection.bbox.center.position.x - detection.bbox.size_x / 2.0)
-        bb_min_y = int(detection.bbox.center.position.y - detection.bbox.size_y / 2.0)
-        bb_max_x = int(detection.bbox.center.position.x + detection.bbox.size_x / 2.0)
-        bb_max_y = int(detection.bbox.center.position.y + detection.bbox.size_y / 2.0)
+        bb_min_x = int(detection.bbox.center.position.x -
+                       detection.bbox.size_x / 2.0)
+        bb_min_y = int(detection.bbox.center.position.y -
+                       detection.bbox.size_y / 2.0)
+        bb_max_x = int(detection.bbox.center.position.x +
+                       detection.bbox.size_x / 2.0)
+        bb_max_y = int(detection.bbox.center.position.y +
+                       detection.bbox.size_y / 2.0)
 
         cropped_image = cv_image[bb_min_y:bb_max_y, bb_min_x:bb_max_x]
 
