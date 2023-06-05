@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18 as resnet
+from torchvision.models import ResNet18_Weights as weights
 
 
 class ResnetSiameseNet(nn.Module):
@@ -11,7 +12,7 @@ class ResnetSiameseNet(nn.Module):
         super().__init__()
 
         self.use_resnet = use_resnet
-        resnet_l = resnet(pretrained=True)
+        resnet_l = resnet(weights=weights.DEFAULT)
 
         if use_resnet:
             self.resnet_l = nn.Sequential(*(list(resnet_l.children())[:-1]))
