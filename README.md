@@ -9,8 +9,8 @@
 ## Dependencies
    - [simple_node](https://github.com/uleroboticsgroup/simple_node)
    - [kant](https://github.com/uleroboticsgroup/kant)
-   - [yolov8_ros](https://github.com/mgonzs13/yolov8_ros)
-   - [ros2_asus_xtion](https://github.com/mgonzs13/ros2_asus_xtion) (demo)
+   - [yolov8_ros](https://github.com/mgonzs13/yolov8_ros/tree/b6fb30608764d4f13619e16e10524c5b60bf35e5)
+   - [ros2_asus_xtion](https://github.com/mgonzs13/ros2_asus_xtion) (only for demo)
 
 
 ## Installation
