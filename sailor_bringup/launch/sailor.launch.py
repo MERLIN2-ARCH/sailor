@@ -56,7 +56,7 @@ def generate_launch_description():
     weights_path_cmd = DeclareLaunchArgument(
         "weights_path",
         default_value=os.path.join(
-            bringup_shared_dir, "weights/mix/dl_model.pt"
+            bringup_shared_dir, "weights/nuScenes/dl_model.pt"
         ),
         description="Path to the weights")
 
@@ -75,28 +75,18 @@ def generate_launch_description():
     #
     # NODES
     #
-    percept_generator_node_cmd = Node(
+    sailor_node_cmd = Node(
         package="sailor",
-        executable="percept_generator_node",
-        name="percept_generator_node",
+        executable="sailor_node",
+        name="sailor_node",
         output="screen",
-        parameters=[{"target_frame": "base_link",
-                     "detection_score_threshold": 0.5,
-                     "torch_device": torch_device
-                     }]
-    )
-
-    anchoring_node_cmd = Node(
-        package="sailor",
-        executable="anchoring_node",
-        name="anchoring_node",
-        output="screen",
-        parameters=[{"matching_threshold": matching_threshold,
-                     "torch_device": torch_device,
-                     "weights_path": weights_path,
-                     "mongo_uri": mongo_uri,
-                     "dao_family": dao_family,
-                     }]
+        parameters=[{
+            "weights_path": weights_path,
+            "torch_device": torch_device,
+            "matching_threshold": matching_threshold,
+            "mongo_uri": mongo_uri,
+            "dao_family": dao_family,
+        }]
     )
 
     knowledge_base_node_cmd = Node(
@@ -123,13 +113,14 @@ def generate_launch_description():
     yolo_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(yolo_shared_dir, "launch",
-                         "yolov8.launch.py")),
+                         "yolov8_3d.launch.py")),
         launch_arguments={
             "model": "yolov8m.pt",
             "device": torch_device,
             "enable": "True",
             "threshold": "0.7",
             "input_image_topic": "/camera/rgb/image_raw",
+            "input_points_topic": "/camera/depth_registered/points",
             "namespace": "yolo"
         }.items()
     )
@@ -150,8 +141,7 @@ def generate_launch_description():
     ld.add_action(dao_family_cmd)
     ld.add_action(mongo_uri_cmd)
 
-    ld.add_action(percept_generator_node_cmd)
-    ld.add_action(anchoring_node_cmd)
+    ld.add_action(sailor_node_cmd)
     ld.add_action(knowledge_base_node_cmd)
     ld.add_action(rviz_cmd)
 

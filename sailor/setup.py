@@ -20,8 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'percept_generator_node = sailor.percept_generator_node:main',
-            'anchoring_node = sailor.anchoring_node:main'
+            'sailor_node = sailor.sailor_node:main',
         ],
     },
 )
