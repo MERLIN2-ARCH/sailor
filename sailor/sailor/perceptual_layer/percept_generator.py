@@ -118,6 +118,7 @@ class PerceptGenerator:
 
     def img_to_tensor(self, image: cv2.Mat) -> List[float]:
         with torch.no_grad():
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = self.resnet_transform(
                 image).unsqueeze(0).to(self.torch_device)
             tensor: torch.Tensor = self.resnet(image)
