@@ -120,7 +120,8 @@ def generate_launch_description():
             "enable": "True",
             "threshold": "0.8",
             "input_image_topic": "/camera/rgb/image_raw",
-            "input_points_topic": "/camera/depth_registered/points",
+            "input_depth_topic": "/camera/depth/image_raw",
+            "input_depth_info_topic": "/camera/depth/camera_info",
             "namespace": "yolo"
         }.items()
     )
