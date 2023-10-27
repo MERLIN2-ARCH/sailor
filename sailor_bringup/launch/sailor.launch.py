@@ -128,8 +128,7 @@ def generate_launch_description():
 
     asus_xtion_action_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(asus_xtion_shared_dir, "launch",
-                         "asus_xtion.launch.py"))
+            os.path.join(bringup_shared_dir, "launch", "asus_xtion.launch.py"))
     )
 
     ld = LaunchDescription()
