@@ -1,4 +1,4 @@
-# SAILOR (Symbolic AnchorIng from perceptuaL for rOs2-based Robots)
+# SAILOR (Symbolic AnchorIng from perceptuaL data for rOs2-based Robots)
 
 
 
