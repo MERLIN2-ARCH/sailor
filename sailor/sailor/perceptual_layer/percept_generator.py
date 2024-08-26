@@ -47,15 +47,7 @@ class PerceptGenerator:
         self.resnet.to(self.torch_device)
         self.resnet.eval()
 
-    def create_percepts(
-            self,
-            cv_image: cv2.Mat,
-            detections_msg: DetectionArray
-    ) -> List[Percept]:
-
-        # check if there are detections
-        if not detections_msg.detections:
-            return []
+    def create_percepts(self, cv_image: cv2.Mat, detections_msg: DetectionArray) -> List[Percept]:
 
         timestamp = float(detections_msg.header.stamp.sec +
                           detections_msg.header.stamp.nanosec / 1e9)
@@ -71,16 +63,12 @@ class PerceptGenerator:
 
         return percepts_list
 
-    def create_percept(
-            self,
-            cv_image: cv2.Mat,
-            detection: Detection
-    ) -> Percept:
+    def create_percept(self, cv_image: cv2.Mat, detection: Detection) -> Percept:
 
         # crop image
         cropped_image = self.crop_image(cv_image, detection.bbox)
 
-        if (cropped_image is None):
+        if cropped_image is None:
             return None
 
         # create percept message
@@ -98,11 +86,7 @@ class PerceptGenerator:
 
         return percept
 
-    def crop_image(
-        self,
-        cv_image: cv2.Mat,
-        bbox: BoundingBox2D
-    ) -> List[float]:
+    def crop_image(self, cv_image: cv2.Mat, bbox: BoundingBox2D) -> List[float]:
 
         bb_min_x = int(bbox.center.position.x - bbox.size.x / 2.0)
         bb_min_y = int(bbox.center.position.y - bbox.size.y / 2.0)

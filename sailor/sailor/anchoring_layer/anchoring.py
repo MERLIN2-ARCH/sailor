@@ -123,8 +123,6 @@ class Anchoring:
 
         self.anchors.append(new_anchor)
 
-    # matching function
-
     def is_same_class(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
         return torch.FloatTensor(
             [float(new_anchor.percept.class_name == anchor.percept.class_name)]

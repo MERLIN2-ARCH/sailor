@@ -25,7 +25,6 @@ class Anchor:
         self._symbol: PddlObjectDto = None
 
     def update(self, other: "Anchor") -> None:
-
         self.percept = other.percept
 
     @property

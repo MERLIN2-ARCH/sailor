@@ -30,8 +30,6 @@ def generate_launch_description():
 
     yolo_shared_dir = get_package_share_directory(
         "yolov8_bringup")
-    asus_xtion_shared_dir = get_package_share_directory(
-        "asus_xtion")
     bringup_shared_dir = get_package_share_directory(
         "sailor_bringup")
     stdout_linebuf_envvar = SetEnvironmentVariable(
@@ -115,13 +113,16 @@ def generate_launch_description():
             os.path.join(yolo_shared_dir, "launch",
                          "yolov8_3d.launch.py")),
         launch_arguments={
-            "model": "yolov8m.pt",
+            "model": "yolov8m-seg.pt",
             "device": torch_device,
             "enable": "True",
             "threshold": "0.8",
             "input_image_topic": "/camera/rgb/image_raw",
+            "image_reliability": "1",
             "input_depth_topic": "/camera/depth/image_raw",
+            "depth_image_reliability": "1",
             "input_depth_info_topic": "/camera/depth/camera_info",
+            "depth_info_reliability": "1",
             "namespace": "yolo"
         }.items()
     )
