@@ -1,20 +1,17 @@
 # SAILOR (Symbolic AnchorIng from perceptuaL data for rOs2-based Robots)
 
-
-
 <p align="center">
   <img src="./docs/architecture.png" width="50%" />
 </p>
 
 ## Dependencies
-   - [simple_node](https://github.com/uleroboticsgroup/simple_node)
-   - [kant](https://github.com/uleroboticsgroup/kant)
-   - [yolov8_ros](https://github.com/mgonzs13/yolov8_ros/tree/b6fb30608764d4f13619e16e10524c5b60bf35e5)
-   - [ros2_asus_xtion](https://github.com/mgonzs13/ros2_asus_xtion) (only for demo)
 
+- [simple_node](https://github.com/uleroboticsgroup/simple_node)
+- [kant](https://github.com/uleroboticsgroup/kant)
+- [yolov8_ros](https://github.com/mgonzs13/yolov8_ros)
+- [ros2_asus_xtion](https://github.com/mgonzs13/ros2_asus_xtion) (only for demo)
 
 ## Installation
-
 
 ```shell
 # repos
@@ -39,7 +36,7 @@ $ ros2 service call /get_objects kant_interfaces/srv/GetPddlObject {}
 
 ```bibtex
 @misc{gonzálezsantamarta2023sailor,
-      title={SAILOR: Perceptual Anchoring For Robotic Cognitive Architectures}, 
+      title={SAILOR: Perceptual Anchoring For Robotic Cognitive Architectures},
       author={Miguel Á. González-Santamarta and Francisco J. Rodríguez-Lera and Vicente Matellán Olivera},
       year={2023},
       eprint={2303.08204},

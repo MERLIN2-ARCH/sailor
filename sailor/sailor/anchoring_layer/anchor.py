@@ -14,21 +14,31 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from threading import Thread
+from kant_dto import PddlObjectDto
+from sailor.perceptual_layer import Percept
 
 
-class ThreadWithReturnValue(Thread):
+class Anchor:
 
-    def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs={}, Verbose=None):
-        Thread.__init__(self, group, target, name, args, kwargs)
-        self._return = None
+    def __init__(self) -> None:
+        self._percept: Percept = None
+        self._symbol: PddlObjectDto = None
 
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args,
-                                        **self._kwargs)
+    def update(self, other: "Anchor") -> None:
+        self.percept = other.percept
 
-    def join(self, *args):
-        Thread.join(self, *args)
-        return self._return
+    @property
+    def percept(self) -> Percept:
+        return self._percept
+
+    @percept.setter
+    def percept(self, percept: Percept) -> None:
+        self._percept = percept
+
+    @property
+    def symbol(self) -> PddlObjectDto:
+        return self._symbol
+
+    @symbol.setter
+    def symbol(self, symbol: PddlObjectDto) -> None:
+        self._symbol = symbol
