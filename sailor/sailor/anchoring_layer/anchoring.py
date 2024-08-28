@@ -169,8 +169,8 @@ class Anchoring:
         # compute the pair percept-anchor features
         data = {
             "same_class": self.is_same_class(new_anchor, anchor).unsqueeze(0),
-            "tensor_1": new_anchor.percept.image_tensor,
-            "tensor_2": anchor.percept.image_tensor,
+            "tensor_1": anchor.percept.image_tensor,
+            "tensor_2": new_anchor.percept.image_tensor,
             "distance": self.calculate_distance(new_anchor, anchor).unsqueeze(0),
             "scale_factor": self.calculate_scale_factor(new_anchor, anchor).unsqueeze(0),
             "time": self.time_difference(new_anchor, anchor).unsqueeze(0)
