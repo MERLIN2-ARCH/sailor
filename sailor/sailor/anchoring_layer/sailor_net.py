@@ -1,3 +1,18 @@
+# Copyright (C) 2023  Miguel Ángel González Santamarta
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 
 import torch
 import torch.nn as nn
@@ -105,13 +120,14 @@ class BinaryClassifierNet(nn.Module):
 
     def __init__(
         self,
-        data_size: int = 256
+        data_size: int = 256,
+        dropout: float = 0.5
     ) -> None:
 
         super().__init__()
 
         self.fc = nn.Sequential(
-            nn.Dropout(0.2),
+            nn.Dropout(dropout),
 
             nn.Linear(data_size, 1024),
             nn.ReLU(inplace=True),
@@ -132,14 +148,15 @@ class SailorNet(nn.Module):
     def __init__(
         self,
         use_resnet: bool = False,
-        data_size: int = 256
+        data_size: int = 256,
+        dropout: float = 0.5
     ) -> None:
 
         super().__init__()
 
         self.resnet_siamese_net = ResnetSiameseNet(use_resnet)
         self.percept_anchor_net = PerceptAnchorNet(data_size)
-        self.binary_classifier_net = BinaryClassifierNet(data_size)
+        self.binary_classifier_net = BinaryClassifierNet(data_size, dropout)
 
     def forward(self, x):
 

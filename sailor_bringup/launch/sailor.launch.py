@@ -54,7 +54,7 @@ def generate_launch_description():
     weights_path_cmd = DeclareLaunchArgument(
         "weights_path",
         default_value=os.path.join(
-            bringup_shared_dir, "weights/nuScenes/dl_model.pt"
+            bringup_shared_dir, "weights/motfront/dl_model.pt"
         ),
         description="Path to the weights")
 
@@ -123,7 +123,8 @@ def generate_launch_description():
             "depth_image_reliability": "1",
             "input_depth_info_topic": "/camera/depth/camera_info",
             "depth_info_reliability": "1",
-            "namespace": "yolo"
+            "namespace": "yolo",
+            "target_frame": "base_link"
         }.items()
     )
 

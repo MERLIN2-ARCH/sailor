@@ -115,8 +115,10 @@ class Anchoring:
                 counter += 1
 
         # create symbolic object
-        new_object = PddlObjectDto(PddlTypeDto(new_anchor.percept.class_name),
-                                   f"{new_anchor.percept.class_name} - {str(counter)}")
+        new_object = PddlObjectDto(
+            PddlTypeDto(new_anchor.percept.class_name),
+            f"{new_anchor.percept.class_name} - {str(counter)}"
+        )
 
         new_anchor.symbol = new_object
         self.object_dao.save(new_object)
@@ -130,35 +132,37 @@ class Anchoring:
 
     def calculate_distance(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
         return torch.FloatTensor(
-            [math.sqrt(
+            [math.exp(-math.sqrt(
                 math.pow(new_anchor.percept.position.position.x -
                          anchor.percept.position.position.x, 2) +
                 math.pow(new_anchor.percept.position.position.y -
                          anchor.percept.position.position.y, 2) +
                 math.pow(new_anchor.percept.position.position.z -
                          anchor.percept.position.position.z, 2)
-            )]
+            ))]
         ).to(self.torch_device)
 
     def calculate_scale_factor(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
 
-        vol_1 = new_anchor.percept.size.x *\
-            new_anchor.percept.size.y *\
-            new_anchor.percept.size.z
-
-        vol_2 = anchor.percept.size.x *\
-            anchor.percept.size.y *\
-            anchor.percept.size.z
-
-        scale_factor = vol_2 / vol_1
-        if vol_1 > vol_2:
-            scale_factor = vol_1 / vol_2
-
-        return torch.FloatTensor([scale_factor]).to(self.torch_device)
+        return torch.FloatTensor([(
+            min(new_anchor.percept.size.x,
+                anchor.percept.size.x) +
+            min(new_anchor.percept.size.y,
+                anchor.percept.size.y) +
+            min(new_anchor.percept.size.z,
+                anchor.percept.size.z)
+        ) / (
+            max(new_anchor.percept.size.x,
+                anchor.percept.size.x) +
+            max(new_anchor.percept.size.y,
+                anchor.percept.size.y) +
+            max(new_anchor.percept.size.z,
+                anchor.percept.size.z)
+        )]).to(self.torch_device)
 
     def time_difference(self, new_anchor: Anchor, anchor: Anchor) -> torch.Tensor:
         return torch.FloatTensor(
-            [abs(new_anchor.percept.timestamp - anchor.percept.timestamp)]
+            [2 / (1 + math.exp(abs(new_anchor.percept.timestamp - anchor.percept.timestamp)))]
         ).to(self.torch_device)
 
     def matching_function(self, new_anchor: Anchor, anchor: Anchor) -> float:
