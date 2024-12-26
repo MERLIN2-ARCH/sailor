@@ -12,7 +12,7 @@
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
-  <depend>darknet_ros</depend>
+  <depend>yolo_ros</depend>
   <depend>asus_xtion</depend>
   <depend>sailor</depend>
 

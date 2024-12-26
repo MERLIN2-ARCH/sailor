@@ -16,7 +16,11 @@
 
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    SetEnvironmentVariable,
+    IncludeLaunchDescription,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 from launch_ros.actions import Node
@@ -28,12 +32,11 @@ from kant_dao.dao_factory import DaoFamilies
 
 def generate_launch_description():
 
-    yolo_shared_dir = get_package_share_directory(
-        "yolov8_bringup")
-    bringup_shared_dir = get_package_share_directory(
-        "sailor_bringup")
+    yolo_shared_dir = get_package_share_directory("yolo_bringup")
+    bringup_shared_dir = get_package_share_directory("sailor_bringup")
     stdout_linebuf_envvar = SetEnvironmentVariable(
-        "RCUTILS_CONSOLE_STDOUT_LINE_BUFFERED", "1")
+        "RCUTILS_CONSOLE_STDOUT_LINE_BUFFERED", "1"
+    )
 
     #
     # ARGS
@@ -42,33 +45,34 @@ def generate_launch_description():
     matching_threshold_cmd = DeclareLaunchArgument(
         "matching_threshold",
         default_value="0.5",
-        description="Matching threshold for anchoring process")
+        description="Matching threshold for anchoring process",
+    )
 
     torch_device = LaunchConfiguration("torch_device")
     torch_device_cmd = DeclareLaunchArgument(
         "torch_device",
         default_value="cuda:0",
-        description="The device used in Pytorch (cuda, cpu)")
+        description="The device used in Pytorch (cuda, cpu)",
+    )
 
     weights_path = LaunchConfiguration("weights_path")
     weights_path_cmd = DeclareLaunchArgument(
         "weights_path",
-        default_value=os.path.join(
-            bringup_shared_dir, "weights/motfront/dl_model.pt"
-        ),
-        description="Path to the weights")
+        default_value=os.path.join(bringup_shared_dir, "weights/motfront/dl_model.pt"),
+        description="Path to the weights",
+    )
 
     dao_family = LaunchConfiguration("dao_family")
     dao_family_cmd = DeclareLaunchArgument(
-        "dao_family",
-        default_value=str(int(DaoFamilies.ROS2)),
-        description="DAO family")
+        "dao_family", default_value=str(int(DaoFamilies.ROS2)), description="DAO family"
+    )
 
     mongo_uri = LaunchConfiguration("mongo_uri")
     mongo_uri_cmd = DeclareLaunchArgument(
         "mongo_uri",
         default_value="mongodb://localhost:27017/anchoring",
-        description="MongoDB URI")
+        description="MongoDB URI",
+    )
 
     #
     # NODES
@@ -78,31 +82,29 @@ def generate_launch_description():
         executable="sailor_node",
         name="sailor_node",
         output="screen",
-        parameters=[{
-            "weights_path": weights_path,
-            "torch_device": torch_device,
-            "matching_threshold": matching_threshold,
-            "mongo_uri": mongo_uri,
-            "dao_family": dao_family,
-        }]
+        parameters=[
+            {
+                "weights_path": weights_path,
+                "torch_device": torch_device,
+                "matching_threshold": matching_threshold,
+                "mongo_uri": mongo_uri,
+                "dao_family": dao_family,
+            }
+        ],
     )
 
     knowledge_base_node_cmd = Node(
         package="kant_knowledge_base",
         executable="knowledge_base_node.py",
         name="knowledge_base_node",
-        condition=LaunchConfigurationEquals(
-            "dao_family", str(int(DaoFamilies.ROS2)))
+        condition=LaunchConfigurationEquals("dao_family", str(int(DaoFamilies.ROS2))),
     )
 
     rviz_cmd = Node(
         name="rviz",
         package="rviz2",
         executable="rviz2",
-        arguments=["-d", os.path.join(
-            bringup_shared_dir,
-            "rviz",
-            "default.rviz")]
+        arguments=["-d", os.path.join(bringup_shared_dir, "rviz", "default.rviz")],
     )
 
     #
@@ -110,12 +112,12 @@ def generate_launch_description():
     #
     yolo_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(yolo_shared_dir, "launch",
-                         "yolov8_3d.launch.py")),
+            os.path.join(yolo_shared_dir, "launch", "yolo.launch.py")
+        ),
         launch_arguments={
             "model": "yolov8m-seg.pt",
             "device": torch_device,
-            "enable": "True",
+            "use_3d": "True",
             "threshold": "0.8",
             "input_image_topic": "/camera/rgb/image_raw",
             "image_reliability": "1",
@@ -124,13 +126,14 @@ def generate_launch_description():
             "input_depth_info_topic": "/camera/depth/camera_info",
             "depth_info_reliability": "1",
             "namespace": "yolo",
-            "target_frame": "base_link"
-        }.items()
+            "target_frame": "base_link",
+        }.items(),
     )
 
     asus_xtion_action_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(bringup_shared_dir, "launch", "asus_xtion.launch.py"))
+            os.path.join(bringup_shared_dir, "launch", "asus_xtion.launch.py")
+        )
     )
 
     ld = LaunchDescription()

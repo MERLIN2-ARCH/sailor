@@ -23,7 +23,7 @@ from simple_node import Node
 from rclpy.qos import qos_profile_sensor_data
 
 from sensor_msgs.msg import Image
-from yolov8_msgs.msg import DetectionArray
+from yolo_msgs.msg import DetectionArray
 from kant_dao.parameter_loader import ParameterLoader
 
 from sailor.perceptual_layer import PerceptGenerator
@@ -37,16 +37,19 @@ class SailorNode(Node):
 
         # parameters
         self.declare_parameter("weights_path", "")
-        weights_path = self.get_parameter(
-            "weights_path").get_parameter_value().string_value
+        weights_path = (
+            self.get_parameter("weights_path").get_parameter_value().string_value
+        )
 
         self.declare_parameter("torch_device", "cuda:0")
-        torch_device = self.get_parameter(
-            "torch_device").get_parameter_value().string_value
+        torch_device = (
+            self.get_parameter("torch_device").get_parameter_value().string_value
+        )
 
         self.declare_parameter("matching_threshold", 0.5)
-        matching_threshold = self.get_parameter(
-            "matching_threshold").get_parameter_value().double_value
+        matching_threshold = (
+            self.get_parameter("matching_threshold").get_parameter_value().double_value
+        )
 
         # create kant dao
         dao_factory = ParameterLoader(self).get_dao_factory()
@@ -55,7 +58,8 @@ class SailorNode(Node):
         # create layers
         self.percept_generator = PerceptGenerator(torch_device)
         self.anchoring = Anchoring(
-            weights_path, object_dao, torch_device, matching_threshold)
+            weights_path, object_dao, torch_device, matching_threshold
+        )
 
         # cv bridge
         self.cv_bridge = cv_bridge.CvBridge()
@@ -65,21 +69,22 @@ class SailorNode(Node):
 
         # subscribers
         self.image_sub = message_filters.Subscriber(
-            self, Image, "/camera/rgb/image_raw",
-            qos_profile=qos_profile_sensor_data)
+            self, Image, "/camera/rgb/image_raw", qos_profile=qos_profile_sensor_data
+        )
         self.detections_sub = message_filters.Subscriber(
-            self, DetectionArray, "/yolo/detections_3d")
+            self, DetectionArray, "/yolo/detections_3d"
+        )
 
         self._synchronizer = message_filters.ApproximateTimeSynchronizer(
-            (self.image_sub, self.detections_sub), 5, 0.5)
+            (self.image_sub, self.detections_sub), 5, 0.5
+        )
         self._synchronizer.registerCallback(self.on_detections)
 
     def on_detections(self, img_msg: Image, detections_msg: DetectionArray) -> None:
 
         cv_image = self.cv_bridge.imgmsg_to_cv2(img_msg)
 
-        percepts = self.percept_generator.create_percepts(
-            cv_image, detections_msg)
+        percepts = self.percept_generator.create_percepts(cv_image, detections_msg)
         anchors = self.anchoring.create_anchors(percepts)
 
         anchors_to_draw = self.anchoring.process_anchors(anchors)
@@ -102,8 +107,7 @@ class SailorNode(Node):
             pos = (int(cx - textsize[0] / 2), int(cy - textsize[1] / 2))
             cv2.putText(cv_image, text, pos, font, 1, color, 2, cv2.LINE_AA)
 
-        dbg_image = self.cv_bridge.cv2_to_imgmsg(
-            cv_image, encoding=img_msg.encoding)
+        dbg_image = self.cv_bridge.cv2_to_imgmsg(cv_image, encoding=img_msg.encoding)
         self.anchors_dbg.publish(dbg_image)
 
 

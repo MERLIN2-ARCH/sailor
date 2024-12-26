@@ -37,8 +37,7 @@ class ResnetSiameseNet(nn.Module):
         self.resnet_output = list(resnet_l.children())[-1].in_features  # 512
 
         self.fc = nn.Sequential(
-            nn.Linear(self.resnet_output, self.resnet_output),
-            nn.ReLU(True)
+            nn.Linear(self.resnet_output, self.resnet_output), nn.ReLU(True)
         )
 
     def forward(self, x):
@@ -62,38 +61,17 @@ class ResnetSiameseNet(nn.Module):
 
 class PerceptAnchorNet(nn.Module):
 
-    def __init__(
-        self,
-        data_size: int = 256
-    ) -> None:
+    def __init__(self, data_size: int = 256) -> None:
 
         super().__init__()
 
-        self.class_l = nn.Sequential(
-            nn.Linear(1, data_size),
-            nn.ReLU(True)
-        )
-        self.siamese_l = nn.Sequential(
-            nn.Linear(512, data_size),
-            nn.ReLU(True)
-        )
-        self.distance_l = nn.Sequential(
-            nn.Linear(1, data_size),
-            nn.ReLU(True)
-        )
-        self.scale_l = nn.Sequential(
-            nn.Linear(1, data_size),
-            nn.ReLU(True)
-        )
-        self.time_l = nn.Sequential(
-            nn.Linear(1, data_size),
-            nn.ReLU(True)
-        )
+        self.class_l = nn.Sequential(nn.Linear(1, data_size), nn.ReLU(True))
+        self.siamese_l = nn.Sequential(nn.Linear(512, data_size), nn.ReLU(True))
+        self.distance_l = nn.Sequential(nn.Linear(1, data_size), nn.ReLU(True))
+        self.scale_l = nn.Sequential(nn.Linear(1, data_size), nn.ReLU(True))
+        self.time_l = nn.Sequential(nn.Linear(1, data_size), nn.ReLU(True))
 
-        self.concat_l = nn.Sequential(
-            nn.Linear(5 * data_size, data_size),
-            nn.ReLU(True)
-        )
+        self.concat_l = nn.Sequential(nn.Linear(5 * data_size, data_size), nn.ReLU(True))
 
     def forward(self, x):
 
@@ -111,32 +89,25 @@ class PerceptAnchorNet(nn.Module):
         time = self.time_l(time)
 
         # concat
-        return self.concat_l(torch.cat(
-            [same_class, siamese, distance, scale_factor, time], 1
-        ))
+        return self.concat_l(
+            torch.cat([same_class, siamese, distance, scale_factor, time], 1)
+        )
 
 
 class BinaryClassifierNet(nn.Module):
 
-    def __init__(
-        self,
-        data_size: int = 256,
-        dropout: float = 0.5
-    ) -> None:
+    def __init__(self, data_size: int = 256, dropout: float = 0.5) -> None:
 
         super().__init__()
 
         self.fc = nn.Sequential(
             nn.Dropout(dropout),
-
             nn.Linear(data_size, 1024),
             nn.ReLU(inplace=True),
-
             nn.Linear(1024, 256),
             nn.ReLU(inplace=True),
-
             nn.Linear(256, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -146,10 +117,7 @@ class BinaryClassifierNet(nn.Module):
 class SailorNet(nn.Module):
 
     def __init__(
-        self,
-        use_resnet: bool = False,
-        data_size: int = 256,
-        dropout: float = 0.5
+        self, use_resnet: bool = False, data_size: int = 256, dropout: float = 0.5
     ) -> None:
 
         super().__init__()

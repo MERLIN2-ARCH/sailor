@@ -17,7 +17,7 @@
 import torch
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Vector3
-from yolov8_msgs.msg import BoundingBox2D
+from yolo_msgs.msg import BoundingBox2D
 
 
 class Percept:

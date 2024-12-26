@@ -23,9 +23,9 @@ import torchvision.transforms as T
 from torchvision.models import resnet18 as resnet
 from torchvision.models import ResNet18_Weights as weights
 
-from yolov8_msgs.msg import Detection
-from yolov8_msgs.msg import BoundingBox2D
-from yolov8_msgs.msg import DetectionArray
+from yolo_msgs.msg import Detection
+from yolo_msgs.msg import BoundingBox2D
+from yolo_msgs.msg import DetectionArray
 from sailor.perceptual_layer import Percept
 
 
@@ -35,22 +35,23 @@ class PerceptGenerator:
 
         # parameters
         self.torch_device = torch.device(
-            torch_device if torch.cuda.is_available() else "cpu")
+            torch_device if torch.cuda.is_available() else "cpu"
+        )
 
         # resnet
         resnet_l = resnet(weights=weights.DEFAULT)
-        self.resnet_transform = T.Compose([
-            T.ToTensor(),
-            weights.DEFAULT.transforms()
-        ])
+        self.resnet_transform = T.Compose([T.ToTensor(), weights.DEFAULT.transforms()])
         self.resnet = nn.Sequential(*(list(resnet_l.children())[:-1]))
         self.resnet.to(self.torch_device)
         self.resnet.eval()
 
-    def create_percepts(self, cv_image: cv2.Mat, detections_msg: DetectionArray) -> List[Percept]:
+    def create_percepts(
+        self, cv_image: cv2.Mat, detections_msg: DetectionArray
+    ) -> List[Percept]:
 
-        timestamp = float(detections_msg.header.stamp.sec +
-                          detections_msg.header.stamp.nanosec / 1e9)
+        timestamp = float(
+            detections_msg.header.stamp.sec + detections_msg.header.stamp.nanosec / 1e9
+        )
         percepts_list = []
 
         for detection in detections_msg.detections:
@@ -103,7 +104,6 @@ class PerceptGenerator:
     def img_to_tensor(self, image: cv2.Mat) -> List[float]:
         with torch.no_grad():
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            image = self.resnet_transform(
-                image).unsqueeze(0).to(self.torch_device)
+            image = self.resnet_transform(image).unsqueeze(0).to(self.torch_device)
             tensor: torch.Tensor = self.resnet(image)
             return tensor.reshape(1, -1)
